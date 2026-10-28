@@ -156,8 +156,13 @@ echo "代码目录：$target"
 if [ '__DEPLOY__' = 1 ]; then
     docker compose version
     docker compose config --quiet
-    docker compose up -d --build
+    if ! docker compose up -d --build --wait --wait-timeout 120; then
+        docker compose ps
+        docker compose logs --tail 80
+        exit 1
+    fi
     docker compose ps
+    echo '部署完成，Web 健康检查已通过。默认仅监听服务器 127.0.0.1:8080。'
 fi
 '@
     $remoteScript = $remoteScript.Replace('__REPO__', $repo).Replace('__BRANCH__', $branch).Replace('__DIRECTORY__', $RemoteDirectory).Replace('__REVISION__', $revision).Replace('__HASH__', $questionHash).Replace('__DEPLOY__', $deployValue).Replace("`r`n", "`n")

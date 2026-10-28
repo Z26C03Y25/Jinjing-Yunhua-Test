@@ -3,7 +3,7 @@
 
 ## Windows → Ubuntu 同步
 
-本地推送使用 GitHub SSH，服务器拉取仍使用 HTTPS。首次运行前在本机执行 `ssh-keygen -t ed25519`，按提示生成密钥（可以设置密钥口令），把 `%USERPROFILE%\.ssh\id_ed25519.pub` 的内容添加到 GitHub Settings → SSH and GPG keys → New SSH key。只上传 `.pub` 公钥，私钥留在本机。脚本会将当前仓库 origin 切换为 SSH 并先检查访问权限。
+本地推送使用 GitHub SSH，服务器使用专用 SSH Deploy key 拉取。首次运行前在本机执行 `ssh-keygen -t ed25519`，按提示生成密钥（可以设置密钥口令），把 `%USERPROFILE%\.ssh\id_ed25519.pub` 的内容添加到 GitHub Settings → SSH and GPG keys → New SSH key。只上传 `.pub` 公钥，私钥留在本机。脚本会将当前仓库 origin 切换为 SSH 并先检查访问权限。
 
 在仓库目录打开 CMD，执行（无需安装 PowerShell 7）：
 
@@ -28,8 +28,20 @@ REM 后续项目具备 compose 配置且 Ubuntu 已安装 Docker Compose 后：
 scripts\sync-remote.cmd -Deploy
 ```
 
-`-SkipCommit` 只推送已有提交，不提交工作区修改。`-Deploy` 在同步校验成功后运行 `docker compose config --quiet`、`docker compose up -d --build` 和 `docker compose ps`。当前尚无 compose 配置，最小同步测试请勿加此参数。部署命令成功不代表应用健康，后续需增加业务健康检查。
+`-SkipCommit` 只推送已有提交，不提交工作区修改。`-Deploy` 在同步校验成功后运行 `docker compose config --quiet`、`docker compose up -d --build` 和 `docker compose ps`。现已提供最小 Web Compose 环境，部署会等待 Web 健康检查通过（120 秒超时），失败时输出容器日志。检测引擎和后端尚未接入。
 
 CMD 入口内部调用 Windows 自带的 PowerShell 执行同步逻辑，保留 `.ps1` 为实现文件。参数包含空格时请使用双引号。
 
 远程存在未提交修改、分支分叉、版本或文件校验不符时脚本会停止，不执行强制重置。首次 SSH 失败时本地提交可能已推送，解决连接问题后可加 `-SkipCommit` 重试。
+
+## 最小部署环境
+
+运行 `scripts\sync-remote.cmd -Deploy`，需要服务器支持 `docker compose up --wait`，且登录用户有 Docker 权限。首次拉取镜像需要访问镜像仓库。默认访问地址为服务器本机 `http://127.0.0.1:8080`，健康检查为 `/healthz`。
+
+在本地另开终端建立隧道（保持窗口开启）：
+
+```bat
+C:\Windows\System32\OpenSSH\ssh.exe -N -L 8080:127.0.0.1:8080 root@123.57.158.71
+```
+
+随后浏览器打开 `http://localhost:8080`。如需调整监听地址和端口，在服务器仓库目录复制 `.env.example` 为 `.env` 后修改；`.env` 不提交。
