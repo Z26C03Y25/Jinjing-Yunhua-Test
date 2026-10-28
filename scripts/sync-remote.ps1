@@ -131,10 +131,15 @@ public class AskPass {
         if ($attempt -lt 3) { Start-Sleep -Seconds 3 }
     }
     if (-not $pushed) { throw '推送失败或无法确认远程版本。请检查 GitHub 网络连接，稍后使用 -SkipCommit 重试。' }
-    $question = Get-ChildItem -LiteralPath (Join-Path $PWD '题目') -Filter '*.docx' -File | Select-Object -First 1
+    $question = Get-ChildItem -LiteralPath (Join-Path $PWD '题目') -Filter '*.docx' -File | Where-Object { $_.Name -notlike '~$*' } | Select-Object -First 1
     if (-not $question) { throw 'Question DOCX was not found' }
     $sha256 = [System.Security.Cryptography.SHA256]::Create()
-    $questionStream = [System.IO.File]::OpenRead($question.FullName)
+    $questionStream = [System.IO.File]::Open(
+        $question.FullName,
+        [System.IO.FileMode]::Open,
+        [System.IO.FileAccess]::Read,
+        ([System.IO.FileShare]::ReadWrite -bor [System.IO.FileShare]::Delete)
+    )
     try {
         $questionHash = [BitConverter]::ToString($sha256.ComputeHash($questionStream)).Replace('-', '').ToLowerInvariant()
     } finally {
