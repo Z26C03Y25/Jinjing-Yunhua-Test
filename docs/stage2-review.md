@@ -7,8 +7,7 @@
 ## 部署
 
 1. Windows 同步：`scripts\sync-remote.cmd`。
-2. Ubuntu 重建：`docker build --pull=false --progress=plain -f backend/Dockerfile -t jinjing-backend:stage1 .`。系统包安装层通常复用缓存。
-3. Windows 部署：`scripts\sync-remote.cmd -Deploy`。旧数据库和分析员密码保留。
+2. Windows 部署：`scripts\sync-remote.cmd -Deploy`。脚本自动按提交版本构建后端（系统包安装层通常复用缓存），再下架启动，核对运行镜像的版本标签。旧数据库和分析员密码保留。
 
 ## 审核操作
 

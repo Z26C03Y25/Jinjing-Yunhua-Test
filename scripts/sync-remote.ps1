@@ -206,6 +206,20 @@ echo "代码目录：$target"
 if [ '__DEPLOY__' = 1 ]; then
     docker compose version
     docker compose config --quiet
+    backend_image=$(docker compose config --format json | python3 -c 'import json,sys; print(json.load(sys.stdin)["services"]["backend"]["image"])')
+    built_revision=$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$backend_image" 2>/dev/null || true)
+    if [ "$built_revision" != "$expected" ]; then
+        if ! docker image inspect debian:12.9-slim >/dev/null 2>&1; then
+            echo '缺少基础镜像 debian:12.9-slim，请先手动准备基础镜像。旧服务保持运行。'
+            exit 1
+        fi
+        echo '后端代码版本已变化，正在构建镜像；基础镜像使用本地缓存...'
+        docker build --pull=false --progress=plain \
+            --label "org.opencontainers.image.revision=$expected" \
+            -f backend/Dockerfile -t "$backend_image" .
+    else
+        echo '后端镜像版本与提交一致，跳过构建。'
+    fi
     for image in $(docker compose config --images); do
         if ! docker image inspect "$image" >/dev/null 2>&1; then
             echo "服务器缺少镜像：$image，请手动下载后重试。脚本不会自动下载。"
@@ -221,6 +235,11 @@ if [ '__DEPLOY__' = 1 ]; then
         exit 1
     fi
     docker compose ps
+    running_id=$(docker compose ps -q backend)
+    running_image=$(docker inspect --format '{{.Image}}' "$running_id")
+    running_revision=$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$running_image")
+    [ "$running_revision" = "$expected" ] || { echo '运行中的后端版本与提交不一致'; exit 1; }
+    echo "后端版本核验通过：$running_revision"
     echo '部署完成，Web 健康检查已通过。默认公网 HTTP 入口为 80，后端仅内部访问；如有 .env 请核对端口配置。'
 fi
 '@
