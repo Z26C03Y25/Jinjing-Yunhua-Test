@@ -206,7 +206,21 @@ echo "代码目录：$target"
 if [ '__DEPLOY__' = 1 ]; then
     docker compose version
     docker compose config --quiet
-    if ! docker compose up -d --build --wait --wait-timeout 120; then
+    pulled=0
+    for attempt in 1 2 3; do
+        echo "正在拉取部署镜像（第 $attempt/3 次），已下载的镜像层会复用..."
+        if docker compose pull; then
+            pulled=1
+            break
+        fi
+        if [ "$attempt" -lt 3 ]; then sleep 5; fi
+    done
+    if [ "$pulled" != 1 ]; then
+        echo '镜像拉取失败：请检查服务器 Docker 镜像源和网络。代码已同步，无需重新克隆。'
+        echo '可在服务器仓库 .env 设置 WEB_IMAGE 为你有权限且可访问的 Nginx 兼容镜像地址后重试。'
+        exit 1
+    fi
+    if ! docker compose up -d --build --pull never --wait --wait-timeout 120; then
         docker compose ps
         docker compose logs --tail 80
         exit 1

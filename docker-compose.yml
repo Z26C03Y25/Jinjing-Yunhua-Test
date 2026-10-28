@@ -2,7 +2,7 @@ name: jinjing-yunhua
 
 services:
   web:
-    image: nginx:1.28.0-alpine
+    image: ${WEB_IMAGE:-nginx:1.28.0-alpine}
     restart: unless-stopped
     ports:
       - "${WEB_BIND:-127.0.0.1}:${WEB_PORT:-8080}:8080"
