@@ -34,14 +34,16 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # Temporary API connectivity stub; replace with the application backend later.
+  # Offline Suricata engine and API, no host ports or Docker socket.
   backend:
-    image: ${WEB_IMAGE:-nginx:1.28.0-alpine}
+    image: ${BACKEND_IMAGE:-jinjing-backend:stage1}
     restart: unless-stopped
     networks:
       - app
     volumes:
-      - ./deploy/backend-placeholder.conf:/etc/nginx/nginx.conf:ro
+      - ids-state:/state
+    environment:
+      APP_PASSWORD: ${APP_PASSWORD:?Set APP_PASSWORD in server .env}
     read_only: true
     tmpfs:
       - /var/cache/nginx
@@ -50,7 +52,7 @@ services:
     security_opt:
       - no-new-privileges:true
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8000/api/healthz"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/healthz', timeout=2)"]
       interval: 5s
       timeout: 3s
       retries: 12
@@ -66,3 +68,6 @@ networks:
   app:
     driver: bridge
     internal: true
+
+volumes:
+  ids-state:
