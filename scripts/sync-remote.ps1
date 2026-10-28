@@ -58,8 +58,23 @@ try {
         if ($LASTEXITCODE -eq 1) { Invoke-Git -Arguments @('commit', '-m', $Message) }
         elseif ($LASTEXITCODE -ne 0) { throw 'Unable to inspect staged changes' }
     }
-    Invoke-Git -Arguments @('push', 'origin', "HEAD:refs/heads/$branch")
     $revision = (& git rev-parse HEAD).Trim()
+    if ($LASTEXITCODE -ne 0) { throw '无法读取本地提交版本' }
+    $pushed = $false
+    for ($attempt = 1; $attempt -le 3; $attempt++) {
+        Write-Host "正在推送到 GitHub（第 $attempt/3 次），请等待服务器确认..."
+        & git -c http.version=HTTP/1.1 -c http.connectTimeout=20 -c http.lowSpeedLimit=1 -c http.lowSpeedTime=45 push origin "HEAD:refs/heads/$branch"
+        if ($LASTEXITCODE -eq 0) { $pushed = $true; break }
+        Write-Host '推送连接异常，正在核对 GitHub 分支版本...'
+        $remoteHead = & git -c http.version=HTTP/1.1 -c http.connectTimeout=20 -c http.lowSpeedLimit=1 -c http.lowSpeedTime=45 ls-remote --exit-code origin "refs/heads/$branch"
+        if ($LASTEXITCODE -eq 0 -and $remoteHead -and ($remoteHead -split '\s+')[0] -eq $revision) {
+            Write-Host '已确认 GitHub 收到了本次提交，继续同步服务器。'
+            $pushed = $true
+            break
+        }
+        if ($attempt -lt 3) { Start-Sleep -Seconds 3 }
+    }
+    if (-not $pushed) { throw '推送失败或无法确认远程版本。请检查 GitHub 网络连接，稍后使用 -SkipCommit 重试。' }
     $question = Get-ChildItem -LiteralPath (Join-Path $PWD '题目') -Filter '*.docx' -File | Select-Object -First 1
     if (-not $question) { throw 'Question DOCX was not found' }
     $questionHash = (Get-FileHash -LiteralPath $question.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
