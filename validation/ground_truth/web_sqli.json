@@ -1,0 +1,8 @@
+{
+  "pcap": "web_sqli.pcap",
+  "scenario": "web_sqli",
+  "benign": false,
+  "description": "离线生成完整 TCP 会话，HTTP URI 包含 SQL UNION SELECT 特征",
+  "expected_alerts": [{"sid": 1000001, "src_ip": "10.0.0.66", "src_port": 40000, "dst_ip": "10.0.0.5", "dst_port_range": [80, 80], "proto": "TCP", "window": {"start": "2026-01-01T10:00:00Z", "end": "2026-01-01T10:00:02Z"}, "min_count": 1}],
+  "known_limitations": ["特征匹配只能证明可疑请求出现，不能证明服务器存在漏洞或攻击成功"]
+}

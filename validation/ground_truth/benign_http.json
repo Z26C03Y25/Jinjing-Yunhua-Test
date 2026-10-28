@@ -1,0 +1,1 @@
+{"pcap":"benign_http.pcap","scenario":"benign_http","benign":true,"description":"150 个完整正常 HTTP 会话，共 1500 包；混合 DNS/TLS 基线留待后续扩充","expected_alerts":[]}
