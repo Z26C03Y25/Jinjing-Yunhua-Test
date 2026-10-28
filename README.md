@@ -3,6 +3,8 @@
 
 ## Windows → Ubuntu 同步
 
+本地推送使用 GitHub SSH，服务器拉取仍使用 HTTPS。首次运行前在本机执行 `ssh-keygen -t ed25519`，按提示生成密钥（可以设置密钥口令），把 `%USERPROFILE%\.ssh\id_ed25519.pub` 的内容添加到 GitHub Settings → SSH and GPG keys → New SSH key。只上传 `.pub` 公钥，私钥留在本机。脚本会将当前仓库 origin 切换为 SSH 并先检查访问权限。
+
 在仓库目录打开 CMD，执行（无需安装 PowerShell 7）：
 
 ```bat

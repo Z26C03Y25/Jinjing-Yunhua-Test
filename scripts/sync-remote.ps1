@@ -10,6 +10,11 @@ param(
     [switch]$SkipCommit
 )
 $ErrorActionPreference = 'Stop'
+$windowsSsh = Join-Path $env:WINDIR 'System32\OpenSSH\ssh.exe'
+if (-not (Test-Path -LiteralPath $windowsSsh)) { throw '未找到 Windows OpenSSH，请安装 Windows 可选功能 OpenSSH 客户端。' }
+$keyPath = Join-Path $env:USERPROFILE '.ssh\id_ed25519'
+$knownHostsPath = Join-Path $env:USERPROFILE '.ssh\known_hosts'
+$gitSshCommand = '"' + $windowsSsh.Replace('\', '/') + '" -o ConnectTimeout=20 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 -o IdentitiesOnly=yes -i "' + $keyPath.Replace('\', '/') + '" -o UserKnownHostsFile="' + $knownHostsPath.Replace('\', '/') + '"'
 
 function Invoke-Git {
     param([string[]]$Arguments)
@@ -33,8 +38,21 @@ if ($RemoteDirectory -notmatch '^[a-zA-Z0-9_-]+(/[a-zA-Z0-9_-]+)*$') {
 Push-Location (Split-Path $PSScriptRoot -Parent)
 try {
     $repo = 'https://github.com/Z26C03Y25/Jinjing-Yunhua-Test.git'
+    $sshRepo = 'git@github.com:Z26C03Y25/Jinjing-Yunhua-Test.git'
     $origin = (& git remote get-url origin)
-    if ($LASTEXITCODE -ne 0 -or $origin.Trim() -ne $repo) { throw 'Unexpected origin URL' }
+    if ($LASTEXITCODE -ne 0 -or $origin.Trim() -notin @($repo, $sshRepo)) { throw 'Unexpected origin URL' }
+    Invoke-Git -Arguments @('remote', 'set-url', 'origin', $sshRepo)
+    Write-Host '先直接验证 GitHub SSH：首次连接请核对主机指纹，然后输入 yes 并回车；如密钥有口令，请按提示输入。'
+    & $windowsSsh -T -o ConnectTimeout=20 -o IdentitiesOnly=yes -i $keyPath -o "UserKnownHostsFile=$knownHostsPath" git@github.com
+    # GitHub returns 1 even after successful authentication (no shell access).
+    if ($LASTEXITCODE -ne 1 -and $LASTEXITCODE -ne 0) {
+        throw 'GitHub SSH 连接失败，请查看上方主机确认、网络或密钥错误。'
+    }
+    Write-Host '本地 GitHub 连接已切换为 SSH，正在检查仓库访问权限...'
+    & git -c "core.sshCommand=$gitSshCommand" ls-remote --exit-code origin HEAD
+    if ($LASTEXITCODE -ne 0) {
+        throw 'GitHub SSH 验证失败。已使用 Windows OpenSSH；请检查本机 id_ed25519 密钥及 GitHub 中对应的公钥，并查看上方具体错误。'
+    }
     $branch = (& git symbolic-ref --short HEAD)
     if ($LASTEXITCODE -ne 0 -or $branch -notmatch '^[a-zA-Z0-9_][a-zA-Z0-9_./-]*$') { throw 'A named branch is required' }
     if (-not $SkipCommit) {
@@ -63,10 +81,10 @@ try {
     $pushed = $false
     for ($attempt = 1; $attempt -le 3; $attempt++) {
         Write-Host "正在推送到 GitHub（第 $attempt/3 次），请等待服务器确认..."
-        & git -c http.version=HTTP/1.1 -c http.connectTimeout=20 -c http.lowSpeedLimit=1 -c http.lowSpeedTime=45 push origin "HEAD:refs/heads/$branch"
+        & git -c "core.sshCommand=$gitSshCommand" push origin "HEAD:refs/heads/$branch"
         if ($LASTEXITCODE -eq 0) { $pushed = $true; break }
         Write-Host '推送连接异常，正在核对 GitHub 分支版本...'
-        $remoteHead = & git -c http.version=HTTP/1.1 -c http.connectTimeout=20 -c http.lowSpeedLimit=1 -c http.lowSpeedTime=45 ls-remote --exit-code origin "refs/heads/$branch"
+        $remoteHead = & git -c "core.sshCommand=$gitSshCommand" ls-remote --exit-code origin "refs/heads/$branch"
         if ($LASTEXITCODE -eq 0 -and $remoteHead -and ($remoteHead -split '\s+')[0] -eq $revision) {
             Write-Host '已确认 GitHub 收到了本次提交，继续同步服务器。'
             $pushed = $true
@@ -125,7 +143,7 @@ fi
     Write-Host "即将连接 $User@$Server，代码目录：~/$RemoteDirectory"
     Write-Host '请输入服务器密码：请在随后 SSH 的 password 提示处输入，输入时不显示字符，按回车确认。'
     Write-Host '密码不会保存。首次连接请先核对云控制台中的主机指纹，确认后输入 yes。'
-    & ssh -t -p $Port -o ConnectTimeout=20 -o ServerAliveInterval=15 "$User@$Server" "echo $encoded | base64 -d | bash"
+    & $windowsSsh -t -p $Port -o ConnectTimeout=20 -o ServerAliveInterval=15 "$User@$Server" "echo $encoded | base64 -d | bash"
     if ($LASTEXITCODE -ne 0) { throw 'Remote synchronization or deployment failed' }
 } finally {
     Pop-Location
