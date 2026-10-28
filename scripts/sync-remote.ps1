@@ -2,7 +2,7 @@
 [CmdletBinding()]
 param(
     [string]$Server,
-    [string]$User,
+    [string]$User = 'root',
     [int]$Port = 22,
     [string]$RemoteDirectory = 'code/Jinjing-Yunhua-Test',
     [string]$Message = 'chore: sync local changes to Ubuntu',
@@ -35,24 +35,55 @@ if ($RemoteDirectory -notmatch '^[a-zA-Z0-9_-]+(/[a-zA-Z0-9_-]+)*$') {
     throw 'RemoteDirectory must be a simple relative path, for example projects/Jinjing-Yunhua-Test'
 }
 
+$askpassDirectory = Join-Path ([IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString('N'))
+$savedEnvironment = @{}
+foreach ($name in @('SSH_ASKPASS', 'SSH_ASKPASS_REQUIRE', 'DISPLAY', 'JINJING_SSH_SECRET')) {
+    $savedEnvironment[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
+}
 Push-Location (Split-Path $PSScriptRoot -Parent)
 try {
+    $password = Read-Host '请输入统一密码（本地密钥口令和服务器密码）' -AsSecureString
+    New-Item -ItemType Directory -Path $askpassDirectory | Out-Null
+    $helper = Join-Path $askpassDirectory 'ssh-askpass.exe'
+    $helperSource = @'
+using System;
+using System.Text;
+using System.Security.Cryptography;
+public class AskPass {
+    public static void Main(string[] args) {
+        string prompt = string.Join(" ", args).ToLowerInvariant();
+        if (!prompt.Contains("password") && !prompt.Contains("passphrase")) {
+            Console.Error.WriteLine("请先手动确认 SSH 主机指纹，再运行同步脚本。");
+            Environment.Exit(1);
+        }
+        byte[] encrypted = Convert.FromBase64String(Environment.GetEnvironmentVariable("JINJING_SSH_SECRET"));
+        byte[] clear = ProtectedData.Unprotect(encrypted, null, DataProtectionScope.CurrentUser);
+        try { Console.WriteLine(Encoding.Unicode.GetString(clear)); }
+        finally { Array.Clear(clear, 0, clear.Length); }
+    }
+}
+'@
+    Add-Type -TypeDefinition $helperSource -Language CSharp -ReferencedAssemblies 'System.Security.dll' -OutputAssembly $helper -OutputType ConsoleApplication
+    $pointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($password)
+    try {
+        $bytes = New-Object byte[] ($password.Length * 2)
+        [Runtime.InteropServices.Marshal]::Copy($pointer, $bytes, 0, $bytes.Length)
+        Add-Type -AssemblyName System.Security
+        $env:JINJING_SSH_SECRET = [Convert]::ToBase64String([Security.Cryptography.ProtectedData]::Protect($bytes, $null, [Security.Cryptography.DataProtectionScope]::CurrentUser))
+    } finally {
+        if ($bytes) { [Array]::Clear($bytes, 0, $bytes.Length) }
+        [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer)
+        $password.Dispose()
+    }
+    $env:SSH_ASKPASS = $helper
+    $env:SSH_ASKPASS_REQUIRE = 'force'
+    $env:DISPLAY = 'jinjing-sync'
     $repo = 'https://github.com/Z26C03Y25/Jinjing-Yunhua-Test.git'
     $sshRepo = 'git@github.com:Z26C03Y25/Jinjing-Yunhua-Test.git'
     $origin = (& git remote get-url origin)
     if ($LASTEXITCODE -ne 0 -or $origin.Trim() -notin @($repo, $sshRepo)) { throw 'Unexpected origin URL' }
     Invoke-Git -Arguments @('remote', 'set-url', 'origin', $sshRepo)
-    Write-Host '先直接验证 GitHub SSH：首次连接请核对主机指纹，然后输入 yes 并回车；如密钥有口令，请按提示输入。'
-    & $windowsSsh -T -o ConnectTimeout=20 -o IdentitiesOnly=yes -i $keyPath -o "UserKnownHostsFile=$knownHostsPath" git@github.com
-    # GitHub returns 1 even after successful authentication (no shell access).
-    if ($LASTEXITCODE -ne 1 -and $LASTEXITCODE -ne 0) {
-        throw 'GitHub SSH 连接失败，请查看上方主机确认、网络或密钥错误。'
-    }
-    Write-Host '本地 GitHub 连接已切换为 SSH，正在检查仓库访问权限...'
-    & git -c "core.sshCommand=$gitSshCommand" ls-remote --exit-code origin HEAD
-    if ($LASTEXITCODE -ne 0) {
-        throw 'GitHub SSH 验证失败。已使用 Windows OpenSSH；请检查本机 id_ed25519 密钥及 GitHub 中对应的公钥，并查看上方具体错误。'
-    }
+    Write-Host '本地通过 Windows OpenSSH 推送到 GitHub。'
     $branch = (& git symbolic-ref --short HEAD)
     if ($LASTEXITCODE -ne 0 -or $branch -notmatch '^[a-zA-Z0-9_][a-zA-Z0-9_./-]*$') { throw 'A named branch is required' }
     if (-not $SkipCommit) {
@@ -95,7 +126,14 @@ try {
     if (-not $pushed) { throw '推送失败或无法确认远程版本。请检查 GitHub 网络连接，稍后使用 -SkipCommit 重试。' }
     $question = Get-ChildItem -LiteralPath (Join-Path $PWD '题目') -Filter '*.docx' -File | Select-Object -First 1
     if (-not $question) { throw 'Question DOCX was not found' }
-    $questionHash = (Get-FileHash -LiteralPath $question.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+    $sha256 = [System.Security.Cryptography.SHA256]::Create()
+    $questionStream = [System.IO.File]::OpenRead($question.FullName)
+    try {
+        $questionHash = [BitConverter]::ToString($sha256.ComputeHash($questionStream)).Replace('-', '').ToLowerInvariant()
+    } finally {
+        $questionStream.Dispose()
+        $sha256.Dispose()
+    }
     $deployValue = if ($Deploy) { '1' } else { '0' }
     $remoteScript = @'
 set -eu
@@ -173,5 +211,9 @@ fi
     & $windowsSsh -t -p $Port -o ConnectTimeout=20 -o ServerAliveInterval=15 "$User@$Server" "echo $encoded | base64 -d | bash"
     if ($LASTEXITCODE -ne 0) { throw 'Remote synchronization or deployment failed' }
 } finally {
+    foreach ($name in $savedEnvironment.Keys) {
+        [Environment]::SetEnvironmentVariable($name, $savedEnvironment[$name], 'Process')
+    }
+    if (Test-Path -LiteralPath $askpassDirectory) { Remove-Item -LiteralPath $askpassDirectory -Recurse -Force }
     Pop-Location
 }
