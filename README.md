@@ -36,14 +36,14 @@ CMD 入口内部调用 Windows 自带的 PowerShell 执行同步逻辑，保留 
 
 ## 最小部署环境
 
-运行 `scripts\sync-remote.cmd -Deploy`，需要服务器支持 `docker compose up --wait`，且登录用户有 Docker 权限。首次拉取镜像需要访问镜像仓库。默认访问地址为服务器本机 `http://127.0.0.1:8080`，健康检查为 `/healthz`。
+运行 `scripts\sync-remote.cmd -Deploy`。服务器需支持 Docker Compose 的 `--wait`，登录用户有 Docker 权限。
 
-在本地另开终端建立隧道（保持窗口开启）：
+公网唯一业务入口为 TCP 80：`浏览器 → 宿主机 80 → web Nginx :8080 → /api/ → backend :8000`。两个容器在同一内部网络，后端无宿主机端口映射。当前 backend 是复用 Nginx 镜像的 API 连通占位服务，只提供 `/api/healthz`，尚无检测业务。后续替换为真实后端时沿用内部 8000 端口。
 
-```bat
-C:\Windows\System32\OpenSSH\ssh.exe -N -L 8080:127.0.0.1:8080 root@123.57.158.71
-```
+部署后访问 `http://123.57.158.71/`、`http://123.57.158.71/api/healthz`。云安全组和服务器防火墙放行 TCP 80，无需放行 8080、8000。SSH 管理通道仍需对管理来源保留访问，否则同步脚本无法连接。如果宿主机已有 Nginx 占用 80，请先协调已有服务配置，当前方案由 Compose Nginx 直接接管 80。
 
-随后浏览器打开 `http://localhost:8080`。如需调整监听地址和端口，在服务器仓库目录复制 `.env.example` 为 `.env` 后修改；`.env` 不提交。
+如果服务器已存在 `.env`，请将 `WEB_BIND=0.0.0.0`、`WEB_PORT=80` 更新后再部署；该文件不会被 Git 覆盖。
 
-镜像由用户在服务器手动准备，例如 `docker pull nginx:1.28.0-alpine`。部署脚本只使用已有镜像，不下载、不构建；缺少镜像时立即退出并提示镜像名。也可在服务器 `.env` 设置 `WEB_IMAGE` 为已准备的 Nginx 兼容镜像标签。
+镜像由用户手动准备：`docker pull nginx:1.28.0-alpine`。两个服务复用此镜像，无需额外下载。脚本只使用已有镜像，不下载、不构建；缺少镜像时立即退出。
+
+部署顺序：检查 Compose 配置及镜像 → `docker compose down --remove-orphans` 下架当前项目旧容器 → 启动新版并等待健康检查。不使用 `-v`，保留数据卷。更新期间存在短暂停机；新版启动失败会输出日志，不会自动回滚。

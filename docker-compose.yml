@@ -5,7 +5,12 @@ services:
     image: ${WEB_IMAGE:-nginx:1.28.0-alpine}
     restart: unless-stopped
     ports:
-      - "${WEB_BIND:-127.0.0.1}:${WEB_PORT:-8080}:8080"
+      - "${WEB_BIND:-0.0.0.0}:${WEB_PORT:-80}:8080"
+    networks:
+      - app
+    depends_on:
+      backend:
+        condition: service_healthy
     volumes:
       - ./deploy/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./frontend/public:/usr/share/nginx/html:ro
@@ -27,3 +32,34 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+
+  # Temporary API connectivity stub; replace with the application backend later.
+  backend:
+    image: ${WEB_IMAGE:-nginx:1.28.0-alpine}
+    restart: unless-stopped
+    networks:
+      - app
+    volumes:
+      - ./deploy/backend-placeholder.conf:/etc/nginx/nginx.conf:ro
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8000/api/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  app:
+    driver: bridge
+    internal: true

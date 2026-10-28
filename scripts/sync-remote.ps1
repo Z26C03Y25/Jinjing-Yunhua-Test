@@ -212,13 +212,16 @@ if [ '__DEPLOY__' = 1 ]; then
             exit 1
         fi
     done
+    echo '配置和镜像检查通过，正在下架旧容器（保留数据卷）...'
+    docker compose down --remove-orphans
+    echo '正在启动新版本并等待健康检查...'
     if ! docker compose up -d --no-build --pull never --wait --wait-timeout 120; then
         docker compose ps
         docker compose logs --tail 80
         exit 1
     fi
     docker compose ps
-    echo '部署完成，Web 健康检查已通过。默认仅监听服务器 127.0.0.1:8080。'
+    echo '部署完成，Web 健康检查已通过。默认公网 HTTP 入口为 80，后端仅内部访问；如有 .env 请核对端口配置。'
 fi
 '@
     $remoteScript = $remoteScript.Replace('__REPO__', $repo).Replace('__BRANCH__', $branch).Replace('__DIRECTORY__', $RemoteDirectory).Replace('__REVISION__', $revision).Replace('__HASH__', $questionHash).Replace('__DEPLOY__', $deployValue).Replace("`r`n", "`n")
