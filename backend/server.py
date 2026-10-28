@@ -1,4 +1,7 @@
 """Stage-one offline IDS API. Suricata executes without shell or Docker socket."""
+import datetime as dt
+import re
+from queries import alerts, overview, detail
 import base64
 import concurrent.futures
 import hashlib
@@ -20,7 +23,13 @@ DB = STATE / 'events.sqlite'
 PASSWORD = os.environ.get('APP_PASSWORD', '')
 POOL = concurrent.futures.ThreadPoolExecutor(max_workers=1)
 SLOTS = threading.BoundedSemaphore(4)
-RULES = pathlib.Path('/app/rules/local.rules')
+RULES = pathlib.Path(os.environ.get('RULES_PATH', '/app/rules/local.rules'))
+RULE_LOCK = threading.Lock()
+
+def rule_list():
+    with database() as db:
+        states = dict(db.execute('SELECT sid,enabled FROM rule_state'))
+    return [{'sid': int(re.search(r'sid:(\d+);', line)[1]), 'raw': line, 'enabled': bool(states.get(int(re.search(r'sid:(\d+);', line)[1]), 1))} for line in RULES.read_text().splitlines() if line.startswith('alert ')]
 
 
 def database():
@@ -37,7 +46,10 @@ def process(task):
     try:
         with database() as db:
             db.execute("UPDATE tasks SET status='running' WHERE id=?", (task,))
-        command = ['suricata', '-c', '/etc/suricata/suricata.yaml', '-S', str(RULES),
+        with RULE_LOCK:
+            snapshot = [r['raw'] for r in rule_list() if r['enabled']]
+            (folder / 'active.rules').write_text('\n'.join(snapshot) + '\n')
+        command = ['suricata', '-c', '/etc/suricata/suricata.yaml', '-S', str(folder / 'active.rules'),
                    '--set', 'stream.checksum-validation=no']
         with (folder / 'engine.log').open('w') as log:
             subprocess.run(command + ['-T', '-l', str(folder)], stdout=log, stderr=subprocess.STDOUT, check=True, timeout=60)
@@ -82,15 +94,52 @@ class API(BaseHTTPRequestHandler):
         with database() as db:
             if url.path == '/api/tasks':
                 return self.send_json(200, [dict(r) for r in db.execute('SELECT * FROM tasks ORDER BY rowid DESC LIMIT 100')])
+            if url.path == '/api/overview':
+                return self.send_json(200, overview(db))
+            if url.path == '/api/rules':
+                return self.send_json(200, rule_list())
             if url.path == '/api/alerts':
-                task = parse_qs(url.query).get('task', [''])[0]
-                rows = db.execute("SELECT * FROM events WHERE event_type='alert' AND task_id=? ORDER BY id LIMIT 200", (task,))
-                return self.send_json(200, [dict(r) for r in rows])
+                try:
+                    return self.send_json(200, alerts(db, parse_qs(url.query)))
+                except ValueError:
+                    return self.send_json(400, {'error': '分页参数必须是整数'})
+            if re.fullmatch(r'/api/alerts/\d+', url.path):
+                result = detail(db, int(url.path.rsplit('/', 1)[1]))
+                if result:
+                    snapshot = STATE / result['task_id'] / 'active.rules'
+                    source = snapshot if snapshot.exists() else RULES
+                    result['rule'] = next((line for line in source.read_text().splitlines() if 'sid:'+str(result['sid'])+';' in line), '历史规则快照不可用')
+                return self.send_json(200 if result else 404, result or {'error': 'not_found'})
         return self.send_json(404, {'error': 'not_found'})
 
     def do_POST(self):
         if not self.authorized():
             return self.send_json(401, {'error': 'unauthorized'})
+        if self.path == '/api/rules' or re.fullmatch(r'/api/alerts/\d+/status', self.path):
+            try:
+                size = int(self.headers.get('Content-Length', '0'))
+                if not 0 < size <= 4096 or self.headers.get('Transfer-Encoding'):
+                    raise ValueError('invalid_body')
+                self.connection.settimeout(10)
+                body = json.loads(self.rfile.read(size))
+                with database() as db:
+                    if self.path == '/api/rules':
+                        sid = int(body['sid'])
+                        if sid not in [r['sid'] for r in rule_list()] or type(body['enabled']) is not bool:
+                            raise ValueError('invalid_rule')
+                        with RULE_LOCK:
+                            db.execute('INSERT OR REPLACE INTO rule_state VALUES (?,?)', (sid, int(body['enabled'])))
+                    else:
+                        event_id = int(self.path.split('/')[3])
+                        if body['status'] not in ('new', 'confirmed', 'false_positive', 'ignored'):
+                            raise ValueError('invalid_status')
+                        if not db.execute("SELECT 1 FROM events WHERE id=? AND event_type='alert'", (event_id,)).fetchone():
+                            return self.send_json(404, {'error': 'not_found'})
+                        db.execute('INSERT OR REPLACE INTO dispositions VALUES (?,?)', (event_id, body['status']))
+                        db.execute('INSERT INTO audit(event_id,status,actor,changed_at) VALUES (?,?,?,?)', (event_id, body['status'], 'analyst', dt.datetime.now(dt.timezone.utc).isoformat()))
+                return self.send_json(200, {'ok': True, 'note': '规则状态作用于后续开始执行的任务'})
+            except (ValueError, KeyError, TypeError):
+                return self.send_json(400, {'error': 'invalid_request'})
         if self.path != '/api/tasks':
             return self.send_json(404, {'error': 'not_found'})
         try:

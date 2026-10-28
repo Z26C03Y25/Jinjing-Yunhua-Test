@@ -12,6 +12,9 @@ CREATE TABLE IF NOT EXISTS events (
  ingested_at TEXT NOT NULL, UNIQUE(task_id,line_no));
 CREATE INDEX IF NOT EXISTS event_task ON events(task_id,event_type);
 CREATE INDEX IF NOT EXISTS event_flow ON events(task_id,flow_id);
+CREATE TABLE IF NOT EXISTS dispositions(event_id INTEGER PRIMARY KEY,status TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY,event_id INTEGER,status TEXT,actor TEXT,changed_at TEXT);
+CREATE TABLE IF NOT EXISTS rule_state(sid INTEGER PRIMARY KEY,enabled INTEGER NOT NULL);
 '''
 
 
