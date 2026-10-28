@@ -35,7 +35,10 @@ if ($RemoteDirectory -notmatch '^[a-zA-Z0-9_-]+(/[a-zA-Z0-9_-]+)*$') {
     throw 'RemoteDirectory must be a simple relative path, for example projects/Jinjing-Yunhua-Test'
 }
 
-$askpassDirectory = Join-Path ([IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString('N'))
+# Windows OpenSSH askpass cannot reliably launch helpers in Unicode TEMP paths.
+# Keep this helper in Git metadata (never staged), under this ASCII workspace path.
+$repositoryRoot = Split-Path $PSScriptRoot -Parent
+$askpassDirectory = Join-Path $repositoryRoot ('.git/ssh-askpass-' + [Guid]::NewGuid().ToString('N'))
 $savedEnvironment = @{}
 foreach ($name in @('SSH_ASKPASS', 'SSH_ASKPASS_REQUIRE', 'DISPLAY', 'JINJING_SSH_SECRET')) {
     $savedEnvironment[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
@@ -75,7 +78,11 @@ public class AskPass {
         [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer)
         $password.Dispose()
     }
-    $env:SSH_ASKPASS = $helper
+    if (-not (Test-Path -LiteralPath $helper)) { throw '自动填密辅助程序生成失败' }
+    $probe = & $helper 'password:'
+    if ($LASTEXITCODE -ne 0 -or -not $probe) { throw '自动填密辅助程序自检失败' }
+    $probe = $null
+    $env:SSH_ASKPASS = $helper.Replace('\', '/')
     $env:SSH_ASKPASS_REQUIRE = 'force'
     $env:DISPLAY = 'jinjing-sync'
     $repo = 'https://github.com/Z26C03Y25/Jinjing-Yunhua-Test.git'
