@@ -99,17 +99,34 @@ try {
     $deployValue = if ($Deploy) { '1' } else { '0' }
     $remoteScript = @'
 set -eu
-repo='__REPO__'
+repo='git@github.com:Z26C03Y25/Jinjing-Yunhua-Test.git'
+https_repo='__REPO__'
 branch='__BRANCH__'
 target="$HOME/__DIRECTORY__"
 expected='__REVISION__'
 command -v git >/dev/null || { echo 'Install git on Ubuntu first'; exit 1; }
 # Keep server-wide URL rewrites (HTTPS -> SSH) out of this sync operation.
 # These environment settings only apply to this remote shell, not saved config.
-echo '使用独立 Git 配置，通过 HTTPS 同步（不读取服务器全局 URL 改写）...'
+echo '服务器通过专用 SSH Deploy key 拉取仓库...'
 export GIT_CONFIG_GLOBAL=/dev/null
 export GIT_CONFIG_NOSYSTEM=1
 export GIT_TERMINAL_PROMPT=0
+mkdir -p "$HOME/.ssh"
+chmod 700 "$HOME/.ssh"
+key="$HOME/.ssh/jinjing_yunhua_deploy"
+if [ ! -f "$key" ]; then
+    ssh-keygen -t ed25519 -N '' -C 'Jinjing-Yunhua read-only deploy key' -f "$key"
+fi
+export GIT_SSH_COMMAND="ssh -i $key -o IdentitiesOnly=yes -o ConnectTimeout=20"
+if ! git ls-remote "$repo" HEAD; then
+    echo '请把下面整行公钥添加到 GitHub 仓库 Settings -> Deploy keys -> Add deploy key：'
+    echo 'https://github.com/Z26C03Y25/Jinjing-Yunhua-Test/settings/keys'
+    echo '只需读取权限，不要勾选 Allow write access。'
+    cat "$key.pub"
+    printf '\n添加完成后按回车继续，或 Ctrl+C 退出：'
+    read -r answer </dev/tty
+    git ls-remote "$repo" HEAD || { echo 'Deploy key 验证失败，请检查是否添加到正确仓库'; exit 1; }
+fi
 mkdir -p "$(dirname "$target")"
 if [ ! -e "$target" ]; then
     echo '首次同步：正在克隆仓库...'
@@ -117,7 +134,12 @@ if [ ! -e "$target" ]; then
 fi
 cd "$target"
 [ "$(git rev-parse --show-toplevel)" = "$target" ] || { echo 'Target is not a repository root'; exit 1; }
-[ "$(git remote get-url origin)" = "$repo" ] || { echo 'Unexpected remote origin'; exit 1; }
+existing_origin=$(git remote get-url origin)
+if [ "$existing_origin" = "$https_repo" ]; then
+    git remote set-url origin "$repo"
+elif [ "$existing_origin" != "$repo" ]; then
+    echo 'Unexpected remote origin'; exit 1
+fi
 [ -z "$(git status --porcelain)" ] || { echo 'Remote has local changes; resolve them first'; exit 1; }
 git checkout "$branch"
 echo '正在拉取远程代码...'
