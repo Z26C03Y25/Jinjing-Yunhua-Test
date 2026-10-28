@@ -1,5 +1,12 @@
 # 已实际发生的 Agent 实现问题
 
+## B5：未核实 Debian 12 的 Suricata 包来源
+
+- 现象：软件源索引成功下载，但普通 bookworm 源没有 suricata 安装候选版本。
+- 原因：Dockerfile 直接假设主仓库提供包，未先核对当前包索引。
+- 修复：根据 Debian 官方包索引增加 bookworm-backports，指定 Suricata 1:7.0.10-1~bpo12+1；构建打印 build-info。
+- 验证：官方包索引已核对，真实容器构建仍待服务器重试，尚未宣称成功。
+
 ## B1：Git 自带 SSH 与中文用户目录不兼容
 
 - 现象：SSH 尝试读取乱码的 `/c/Users/.../.ssh`，无法保存 known_hosts，认证失败。
