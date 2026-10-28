@@ -71,6 +71,12 @@ branch='__BRANCH__'
 target="$HOME/__DIRECTORY__"
 expected='__REVISION__'
 command -v git >/dev/null || { echo 'Install git on Ubuntu first'; exit 1; }
+# Keep server-wide URL rewrites (HTTPS -> SSH) out of this sync operation.
+# These environment settings only apply to this remote shell, not saved config.
+echo '使用独立 Git 配置，通过 HTTPS 同步（不读取服务器全局 URL 改写）...'
+export GIT_CONFIG_GLOBAL=/dev/null
+export GIT_CONFIG_NOSYSTEM=1
+export GIT_TERMINAL_PROMPT=0
 mkdir -p "$(dirname "$target")"
 if [ ! -e "$target" ]; then
     echo '首次同步：正在克隆仓库...'

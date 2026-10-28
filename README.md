@@ -13,6 +13,8 @@ scripts\sync-remote.cmd
 
 如果本地 Git 尚未配置提交姓名或邮箱，脚本会中文提示填写，只保存到当前仓库，不修改全局配置。该信息用于 commit 作者署名，不是 GitHub 登录密码。
 
+远程同步在当前 SSH 进程中隔离 Git 全局和系统配置，避免服务器的 `insteadOf` 把 HTTPS 改为 SSH 而出现 `Permission denied (publickey)`，不修改服务器现有配置。当前默认适用于公开仓库；私有仓库需要另行配置此同步进程可用的凭据，全局 credential helper 不会被读取。
+
 脚本将提交所有未忽略的本地修改、推送当前分支，再在 Ubuntu 的 `~/code/Jinjing-Yunhua-Test` 同步：首次自动创建 `~/code` 并 git clone，后续 git pull --ff-only 更新同一分支，核验 commit 和题目 DOCX 的 SHA256。`~` 指 SSH 登录用户的家目录。运行前请检查 `git status`，确保没有准备外的文件。Ubuntu 需预装 git、python3，并能够访问 GitHub；私有仓库还需提前在服务器配置 GitHub 读取凭据，服务器登录密码不能代替 GitHub 凭据。
 
 可选参数：
