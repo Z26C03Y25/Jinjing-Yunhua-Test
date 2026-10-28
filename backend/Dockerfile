@@ -1,5 +1,10 @@
 FROM debian:12.9-slim
-RUN apt-get update && apt-get install -y --no-install-recommends python3 suricata ca-certificates && rm -rf /var/lib/apt/lists/*
+ARG APT_MIRROR=http://mirrors.ustc.edu.cn
+RUN sed -i "s|http://deb.debian.org|${APT_MIRROR}|g; s|http://security.debian.org|${APT_MIRROR}|g" /etc/apt/sources.list.d/debian.sources \
+    && printf 'Acquire::http::Timeout "30";\nAcquire::https::Timeout "30";\nAcquire::Retries "2";\n' > /etc/apt/apt.conf.d/80-download-timeout \
+    && apt-get update -o APT::Update::Error-Mode=any \
+    && apt-get install -y --no-install-recommends python3 suricata ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY backend/ /app/
 COPY rules/ /app/rules/

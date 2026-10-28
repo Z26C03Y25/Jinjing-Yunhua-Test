@@ -1,0 +1,10 @@
+.git
+.env
+.env.*
+**/__pycache__
+**/*.pyc
+data
+validation
+agent-log
+docs
+题目
