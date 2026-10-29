@@ -15,6 +15,7 @@ import threading
 import uuid
 from contextlib import contextmanager
 from security import FailureLimiter
+from rule_editor import publish
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit, parse_qs
 from collector import connect, import_eve
@@ -33,7 +34,8 @@ AUTH_FAILURES = FailureLimiter()
 def rule_list():
     with database() as db:
         states = dict(db.execute('SELECT sid,enabled FROM rule_state'))
-    return [{'sid': int(re.search(r'sid:(\d+);', line)[1]), 'raw': line, 'enabled': bool(states.get(int(re.search(r'sid:(\d+);', line)[1]), 1))} for line in RULES.read_text().splitlines() if line.startswith('alert ')]
+        overrides = {r['sid']: (r['raw'], r['revision']) for r in db.execute('SELECT * FROM rule_overrides')}
+    return [{'sid': int(re.search(r'sid:(\d+);', line)[1]), 'raw': overrides.get(int(re.search(r'sid:(\d+);', line)[1]), (line, 0))[0], 'revision': overrides.get(int(re.search(r'sid:(\d+);', line)[1]), (line, 0))[1], 'enabled': bool(states.get(int(re.search(r'sid:(\d+);', line)[1]), 1))} for line in RULES.read_text().splitlines() if line.startswith('alert ')]
 
 
 @contextmanager
@@ -132,6 +134,14 @@ class API(BaseHTTPRequestHandler):
                 return self.send_json(200, [dict(r) for r in db.execute('SELECT * FROM tasks ORDER BY rowid DESC LIMIT 100')])
             if url.path == '/api/overview':
                 return self.send_json(200, overview(db))
+            if re.fullmatch(r'/api/rules/\d+/history', url.path):
+                sid = int(url.path.split('/')[3])
+                baseline = next((line for line in RULES.read_text().splitlines() if re.search(r'\bsid:'+str(sid)+r';', line)), None)
+                if baseline is None:
+                    return self.send_json(404, {'error': 'not_found'})
+                rows = [dict(r) for r in db.execute('SELECT sid,revision,raw,actor,created_at FROM rule_revisions WHERE sid=? ORDER BY revision DESC', (sid,))]
+                rows.append({'sid': sid, 'revision': 0, 'raw': baseline, 'actor': 'repository', 'created_at': None})
+                return self.send_json(200, rows)
             if url.path == '/api/rules':
                 return self.send_json(200, rule_list())
             if url.path == '/api/alerts':
@@ -156,6 +166,39 @@ class API(BaseHTTPRequestHandler):
             return self.send_json(429 if self.auth_limited else 401, {'error': '登录失败过多，请一分钟后重试' if self.auth_limited else 'unauthorized'})
         if self.actor != 'analyst':
             return self.send_json(403, {'error': '只读角色不能执行修改操作'})
+        if re.fullmatch(r'/api/rules/\d+(/rollback)?', self.path):
+            try:
+                size = int(self.headers.get('Content-Length', '0'))
+                if not 0 < size <= 32768 or self.headers.get('Transfer-Encoding'):
+                    raise ValueError('规则请求大小无效')
+                self.connection.settimeout(10)
+                body = json.loads(self.rfile.read(size))
+                sid = int(self.path.split('/')[3])
+                with RULE_LOCK:
+                    candidates = rule_list()
+                    if sid not in [r['sid'] for r in candidates]:
+                        return self.send_json(404, {'error': '规则不存在'})
+                    with database() as db:
+                        raw = body.get('raw')
+                        if self.path.endswith('/rollback'):
+                            target = body.get('revision')
+                            if type(target) is not int:
+                                raise ValueError('回滚版本必须是整数')
+                            if target == 0:
+                                raw = next(line for line in RULES.read_text().splitlines() if re.search(r'\bsid:'+str(sid)+r';', line))
+                            else:
+                                row = db.execute('SELECT raw FROM rule_revisions WHERE sid=? AND revision=?', (sid, target)).fetchone()
+                                if not row:
+                                    raise ValueError('历史版本不存在')
+                                raw = row[0]
+                        revision = publish(db, sid, raw, body.get('base_revision'), self.actor, candidates, STATE, dt.datetime.now(dt.timezone.utc).isoformat())
+                return self.send_json(200, {'ok': True, 'revision': revision, 'note': '已通过真实引擎校验，对后续任务生效'})
+            except RuntimeError as exc:
+                return self.send_json(409, {'error': str(exc)})
+            except (ValueError, KeyError, TypeError) as exc:
+                return self.send_json(422, {'error': str(exc)})
+            except (subprocess.TimeoutExpired, OSError):
+                return self.send_json(503, {'error': '引擎校验未完成，旧规则保持不变，请稍后重试'})
         if self.path == '/api/rules' or re.fullmatch(r'/api/alerts/\d+/(status|notes)', self.path):
             try:
                 size = int(self.headers.get('Content-Length', '0'))
