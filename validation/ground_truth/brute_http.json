@@ -1,0 +1,8 @@
+{
+  "pcap": "brute_http.pcap",
+  "scenario": "brute_http",
+  "benign": false,
+  "description": "15 次 HTTP 401 在约 7 秒内返回同一客户端，作为 HTTP 认证爆破线索",
+  "expected_alerts": [{"sid": 1000006, "src_ip": "10.0.0.5", "dst_ip": "10.0.0.66", "dst_port_range": [40000, 40014], "proto": "TCP", "window": {"start": "2026-01-01T10:00:00Z", "end": "2026-01-01T10:00:10Z"}}],
+  "known_limitations": ["高频 401 不等于恶意爆破；正常认证重试也可能误报，规则观察的是响应方向"]
+}

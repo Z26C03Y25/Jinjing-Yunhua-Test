@@ -3,3 +3,4 @@ alert http any any -> any any (msg:"LOCAL Possible script injection in URI"; flo
 alert http any any -> any any (msg:"LOCAL Sensitive passwd path in raw URI"; flow:established,to_server; http.uri.raw; content:"/etc/passwd"; nocase; priority:2; sid:1000003; rev:1;)
 alert tcp any any -> any any (msg:"LOCAL High SYN frequency possible scan"; flags:S; flow:stateless; detection_filter:track by_src,count 20,seconds 10; priority:2; sid:1000004; rev:1;)
 alert dns any any -> any any (msg:"LOCAL Suspicious long DNS query"; dns.query; bsize:>100; priority:3; sid:1000005; rev:1;)
+alert http any any -> any any (msg:"LOCAL Repeated HTTP authentication failures"; flow:established,to_client; http.stat_code; content:"401"; detection_filter:track by_dst,count 5,seconds 10; priority:2; sid:1000006; rev:1;)

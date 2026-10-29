@@ -27,10 +27,12 @@ def packet(src, dst, sport, dport, seq, ack, flags, payload=b''):
     return bytes.fromhex('0200000000050200000000660800') + ip + tcp + payload
 
 
-def session(index, uri):
+def session(index, uri, unauthorized=False):
     a, b, port = '10.0.0.66', '10.0.0.5', 40000 + index
     request = f'GET {uri} HTTP/1.1\r\nHost: lab.example\r\nConnection: close\r\n\r\n'.encode('ascii')
     response = b'HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nOK'
+    if unauthorized:
+        response = b'HTTP/1.1 401 Unauthorized\r\nContent-Length: 0\r\nConnection: close\r\n\r\n'
     client = lambda s, ack, f, p=b'': packet(a, b, port, 80, s, ack, f, p)
     server = lambda s, ack, f, p=b'': packet(b, a, 80, port, s, ack, f, p)
     c, s = 1001 + len(request), 9001 + len(response)
@@ -71,6 +73,7 @@ def generate_extended():
         ip = ip[:10] + struct.pack('!H', checksum(ip)) + ip[12:]
         dns.append((START+i//50, bytes.fromhex('0200000000050200000000660800') + ip + udp))
     scenarios['dns_long'] = dns
+    scenarios['brute_http'] = [(START+(i//2 if i<15 else i), p) for i in range(150) for p in session(i, '/login' if i<15 else '/catalog', unauthorized=i<15)]
     for name, uri in [('web_xss', '/search?q=%3Cscript%3Ealert(1)%3C/script%3E'), ('web_sqli_case', '/search?q=1%20uNiOn%20sElEcT%20password')]:
         scenarios[name] = [(START+i, p) for i in range(150) for p in session(i, uri if i == 0 else '/catalog')]
     for name, packets in scenarios.items():
