@@ -39,7 +39,7 @@ const base = process.env.TEST_URL || 'http://123.57.158.71';
     await page.getByRole('button', { name: '加载完整详情' }).first().click();
     await page.waitForFunction(() => document.querySelector('#alerts pre').textContent.includes('原始 EVE 事件'));
     const evidence = await page.locator('#alerts pre').first().textContent();
-    if (!evidence.includes('onerror')) throw Error('attack marker missing from evidence');
+    if (!evidence.includes('<img src=x onerror=alert(1)>')) throw Error('literal HTML attack marker missing from evidence');
     if (await page.locator('#alerts img').count()) throw Error('payload created an HTML image');
     if (dialogs.length || errors.length) throw Error(JSON.stringify({ dialogs, errors }));
     await page.screenshot({ path: 'tmp/browser/investigation.png', fullPage: true });

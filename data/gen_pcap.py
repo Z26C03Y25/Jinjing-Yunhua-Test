@@ -27,9 +27,11 @@ def packet(src, dst, sport, dport, seq, ack, flags, payload=b''):
     return bytes.fromhex('0200000000050200000000660800') + ip + tcp + payload
 
 
-def session(index, uri, unauthorized=False, tls=False):
+def session(index, uri, unauthorized=False, tls=False, user_agent=None):
     a, b, port = '10.0.0.66', '10.0.0.5', 40000 + index
     request = f'GET {uri} HTTP/1.1\r\nHost: lab.example\r\nConnection: close\r\n\r\n'.encode('ascii')
+    if user_agent:
+        request = request[:-2] + ('User-Agent: ' + user_agent + '\r\n\r\n').encode('ascii')
     response = b'HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nOK'
     if unauthorized:
         response = b'HTTP/1.1 401 Unauthorized\r\nContent-Length: 0\r\nConnection: close\r\n\r\n'
