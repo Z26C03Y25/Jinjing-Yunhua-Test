@@ -55,6 +55,35 @@ def generate():
     return paths
 
 
+def generate_extended():
+    paths = []
+    scenarios = {
+        'scan_syn': [(START + i // 50, packet('10.0.0.66', '10.0.0.5', 45000, 1000+i, i+1, 0, 2)) for i in range(1200)],
+        'scan_slow': [(START + i * 2, packet('10.0.0.66', '10.0.0.5', 45000, 1000+i, i+1, 0, 2)) for i in range(1200)],
+    }
+    dns = []
+    for i in range(1200):
+        name = '.'.join(['a'*50, 'b'*50, str(i), 'lab', 'example'])
+        query = b''.join(bytes([len(label)]) + label.encode() for label in name.split('.')) + b'\0'
+        payload = struct.pack('!HHHHHH', i, 256, 1, 0, 0, 0) + query + struct.pack('!HH', 1, 1)
+        udp = struct.pack('!HHHH', 45000, 53, len(payload)+8, 0) + payload
+        ip = struct.pack('!BBHHHBBH4s4s', 69, 0, 20+len(udp), i, 0, 64, 17, 0, socket.inet_aton('10.0.0.66'), socket.inet_aton('10.0.0.5'))
+        ip = ip[:10] + struct.pack('!H', checksum(ip)) + ip[12:]
+        dns.append((START+i//50, bytes.fromhex('0200000000050200000000660800') + ip + udp))
+    scenarios['dns_long'] = dns
+    for name, uri in [('web_xss', '/search?q=%3Cscript%3Ealert(1)%3C/script%3E'), ('web_sqli_case', '/search?q=1%20uNiOn%20sElEcT%20password')]:
+        scenarios[name] = [(START+i, p) for i in range(150) for p in session(i, uri if i == 0 else '/catalog')]
+    for name, packets in scenarios.items():
+        path = ROOT / (name+'.pcap')
+        with path.open('wb') as stream:
+            stream.write(struct.pack('<IHHIIII', 0xa1b2c3d4, 2, 4, 0, 0, 65535, 1))
+            for index, (seconds, data) in enumerate(packets):
+                stream.write(struct.pack('<IIII', seconds, index % 1000, len(data), len(data)))
+                stream.write(data)
+        paths.append(path)
+    return paths
+
+
 if __name__ == '__main__':
-    for path in generate():
+    for path in generate() + generate_extended():
         print(path.name, path.stat().st_size)

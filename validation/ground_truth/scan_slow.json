@@ -1,0 +1,24 @@
+{
+  "pcap": "scan_slow.pcap",
+  "scenario": "scan_slow",
+  "benign": false,
+  "expected_alerts": [
+    {
+      "sid": 1000004,
+      "src_ip": "10.0.0.66",
+      "dst_ip": "10.0.0.5",
+      "dst_port_range": [
+        1000,
+        2199
+      ],
+      "proto": "TCP",
+      "window": {
+        "start": "2026-01-01T10:00:00Z",
+        "end": "2026-01-01T10:40:00Z"
+      }
+    }
+  ],
+  "known_limitations": [
+    "慢扫预期暴露阈值规则的 FN，仍保留应检测攻击的期望，不伪装成正常样本"
+  ]
+}
