@@ -8,6 +8,7 @@ import os
 import pathlib
 import re
 import time
+import statistics
 import urllib.request
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -83,12 +84,23 @@ def main():
         result = evaluate(truth, found)
         result['task_id'] = task
         result['client_observed_completion_ms'] = round((time.monotonic() - started) * 1000, 2)
+        groups = api('/groups?task_id=' + task)
+        result['aggregation'] = {key: groups[key] for key in ('raw_count', 'group_count', 'reduction_rate', 'window_seconds')}
+        if found and truth['expected_alerts']:
+            first_attack = min(timestamp(e['window']['start']) for e in truth['expected_alerts'])
+            delays = [(timestamp(a['ingested_at']) - first_attack).total_seconds() for a in found]
+            result['historical_packet_to_ingestion_seconds'] = {'mean': sum(delays)/len(delays), 'max': max(delays), 'interpretation': '历史样本墙钟差，包含样本年代，不可用来评价引擎处理速度'}
         results.append(result)
     summary = {'matched_alerts': sum(r['matched_alerts'] for r in results), 'fp_alerts': sum(r['fp_alerts'] for r in results), 'tp_expectations': sum(r['tp_expectations'] for r in results), 'fn_expectations': sum(r['fn_expectations'] for r in results)}
     summary['precision_alert_level'] = summary['matched_alerts'] / (summary['matched_alerts'] + summary['fp_alerts']) if summary['matched_alerts'] + summary['fp_alerts'] else None
     summary['recall_expectation_level'] = summary['tp_expectations'] / (summary['tp_expectations'] + summary['fn_expectations']) if summary['tp_expectations'] + summary['fn_expectations'] else None
+    summary['raw_alerts'] = sum(r['aggregation']['raw_count'] for r in results)
+    summary['aggregate_groups'] = sum(r['aggregation']['group_count'] for r in results)
+    summary['reduction_rate'] = 1-summary['aggregate_groups']/summary['raw_alerts'] if summary['raw_alerts'] else 0
+    summary['client_completion_ms_mean'] = round(statistics.mean(r['client_observed_completion_ms'] for r in results), 2)
+    summary['client_completion_ms_max'] = max(r['client_observed_completion_ms'] for r in results)
     report = {'summary': summary, 'metric_definition': '原始告警精确率单列；finding 精确率/召回率/F1 使用期望命中项与同 SID 五元组十秒窗的误报组计数。完成耗时为客户端提交到收齐结果，含排队、网络和轮询，不是首攻击包到入库时延。', 'generated_at': dt.datetime.now(dt.timezone.utc).isoformat(), 'results': results,
-              'limitations': ['已覆盖 Web、扫描、异常 DNS、HTTP 认证失败四类线索；正常基线的 DNS 仅查询、TLS 仅 ClientHello，不含完整握手', 'finding 聚合只用于评测误报计数，尚非业务告警抑制功能', '未实现业务去重率；离线抓包历史时间与处理时间分开，不用历史包到当前日期的差值冒充检测耗时']}
+              'limitations': ['已覆盖 Web、扫描、异常 DNS、HTTP 认证失败四类线索；正常基线的 DNS 仅查询、TLS 仅 ClientHello，不含完整握手', 'finding 聚合只用于评测误报计数，尚非业务告警抑制功能', '离线抓包历史时间与处理时间分开，不用历史包到当前日期的差值冒充检测耗时']}
     (ROOT / 'validation/report.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
     lines = ['# 真实 API 自验结果', '', '| 场景 | 期望 TP | 期望 FN | 告警 FP |', '| --- | --- | --- | --- |']
     lines += [f"| {r['scenario']} | {r['tp_expectations']} | {r['fn_expectations']} | {r['fp_alerts']} |" for r in results]
