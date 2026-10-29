@@ -1,0 +1,10 @@
+* text=auto
+*.sh text eol=lf
+Makefile text eol=lf
+Dockerfile text eol=lf
+*.conf text eol=lf
+*.yml text eol=lf
+*.py text eol=lf
+*.cmd text eol=crlf
+*.pcap binary
+*.docx binary
