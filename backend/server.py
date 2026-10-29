@@ -156,10 +156,11 @@ class API(BaseHTTPRequestHandler):
             return self.send_json(429 if self.auth_limited else 401, {'error': '登录失败过多，请一分钟后重试' if self.auth_limited else 'unauthorized'})
         if self.actor != 'analyst':
             return self.send_json(403, {'error': '只读角色不能执行修改操作'})
-        if self.path == '/api/rules' or re.fullmatch(r'/api/alerts/\d+/status', self.path):
+        if self.path == '/api/rules' or re.fullmatch(r'/api/alerts/\d+/(status|notes)', self.path):
             try:
                 size = int(self.headers.get('Content-Length', '0'))
-                if not 0 < size <= 4096 or self.headers.get('Transfer-Encoding'):
+                limit = 16384 if self.path.endswith('/notes') else 4096
+                if not 0 < size <= limit or self.headers.get('Transfer-Encoding'):
                     raise ValueError('invalid_body')
                 self.connection.settimeout(10)
                 body = json.loads(self.rfile.read(size))
@@ -172,6 +173,15 @@ class API(BaseHTTPRequestHandler):
                             db.execute('INSERT OR REPLACE INTO rule_state VALUES (?,?)', (sid, int(body['enabled'])))
                     else:
                         event_id = int(self.path.split('/')[3])
+                        if self.path.endswith('/notes'):
+                            conclusion, recommendation = body.get('conclusion'), body.get('recommendation', '')
+                            if not isinstance(conclusion, str) or not conclusion.strip() or len(conclusion) > 1500 or not isinstance(recommendation, str) or len(recommendation) > 1500:
+                                raise ValueError('invalid_notes')
+                            if not db.execute("SELECT 1 FROM events WHERE id=? AND event_type='alert'", (event_id,)).fetchone():
+                                return self.send_json(404, {'error': 'not_found'})
+                            db.execute('INSERT INTO analyst_notes(event_id,conclusion,recommendation,actor,created_at) VALUES (?,?,?,?,?)', (event_id, conclusion.strip(), recommendation.strip(), self.actor, dt.datetime.now(dt.timezone.utc).isoformat()))
+                            db.commit()
+                            return self.send_json(200, {'ok': True})
                         if body['status'] not in ('new', 'confirmed', 'false_positive', 'ignored'):
                             raise ValueError('invalid_status')
                         if not db.execute("SELECT 1 FROM events WHERE id=? AND event_type='alert'", (event_id,)).fetchone():

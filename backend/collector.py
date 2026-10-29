@@ -16,6 +16,7 @@ CREATE INDEX IF NOT EXISTS event_flow ON events(task_id,flow_id);
 CREATE TABLE IF NOT EXISTS dispositions(event_id INTEGER PRIMARY KEY,status TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY,event_id INTEGER,status TEXT,actor TEXT,changed_at TEXT);
 CREATE TABLE IF NOT EXISTS rule_state(sid INTEGER PRIMARY KEY,enabled INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS analyst_notes(id INTEGER PRIMARY KEY,event_id INTEGER NOT NULL,conclusion TEXT NOT NULL,recommendation TEXT NOT NULL,actor TEXT NOT NULL,created_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS protocol_metadata(
  event_id INTEGER PRIMARY KEY REFERENCES events(id), app_proto TEXT,
  http_host TEXT,http_url TEXT,http_method TEXT,http_status INTEGER,

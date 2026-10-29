@@ -71,3 +71,16 @@ class HTTPSecurityTest(unittest.TestCase):
         self.assertEqual(self.request('/api/rules', {'sid': 1000001, 'enabled': 'false'})[0], 400)
         self.assertEqual(self.request('/api/alerts?src_ip=%27%20OR%201=1--')[1]['total'], 0)
         self.assertEqual(self.request('/api/tasks')[1], [])
+
+    def test_notes_are_versioned_and_readonly_cannot_write(self):
+        with self.module.database() as db:
+            db.execute("INSERT INTO events(id,task_id,line_no,event_type,raw_json,ingested_at) VALUES (1000,'test',1,'alert','{}','now')")
+        body = {'conclusion': '仅发现可疑请求，影响待核查', 'recommendation': '核对服务器日志'}
+        self.assertEqual(self.request('/api/alerts/1000/notes', body, actor='viewer')[0], 403)
+        self.assertEqual(self.request('/api/alerts/1000/notes', body)[0], 200)
+        self.assertEqual(self.request('/api/alerts/1000/notes', dict(body, conclusion='二次复核结论'))[0], 200)
+        with self.module.database() as db:
+            rows = db.execute('SELECT conclusion,actor FROM analyst_notes WHERE event_id=1000 ORDER BY id').fetchall()
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0]['actor'], 'analyst')
+        self.assertEqual(self.request('/api/alerts/99999/notes', body)[0], 404)

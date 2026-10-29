@@ -67,4 +67,5 @@ def detail(db, event_id):
     result['payload'] = result['protocol_metadata']['payload_excerpt']
     result['related'] = [json.loads(r[0]) for r in db.execute("SELECT raw_json FROM events WHERE task_id=? AND flow_id=? AND event_type IN ('flow','http','dns','tls') ORDER BY id LIMIT 50", (row['task_id'], row['flow_id']))]
     result['audit'] = [dict(r) for r in db.execute('SELECT status,actor,changed_at FROM audit WHERE event_id=? ORDER BY id', (event_id,))]
+    result['analyst_notes'] = [dict(r) for r in db.execute('SELECT conclusion,recommendation,actor,created_at FROM analyst_notes WHERE event_id=? ORDER BY id', (event_id,))]
     return result

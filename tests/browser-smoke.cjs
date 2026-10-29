@@ -38,7 +38,7 @@ const base = process.env.TEST_URL || 'http://123.57.158.71';
     await page.locator('#alerts summary').first().click();
     await page.getByRole('button', { name: '加载完整详情' }).first().click();
     await page.waitForFunction(() => document.querySelector('#alerts pre').textContent.includes('谁与谁通信'));
-    await page.locator('.raw-evidence summary').first().click();
+    await page.locator('#audience').selectOption('professional');
     const evidence = await page.locator('.raw-evidence pre').first().textContent();
     if (!evidence.includes('<img src=x onerror=alert(1)>')) throw Error('literal HTML attack marker missing from evidence');
     if (await page.locator('#alerts img').count()) throw Error('payload created an HTML image');
