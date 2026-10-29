@@ -44,6 +44,7 @@ services:
       - ids-state:/state
     environment:
       APP_PASSWORD: ${APP_PASSWORD:?Set APP_PASSWORD in server .env}
+      VIEWER_PASSWORD: ${VIEWER_PASSWORD:-}
     read_only: true
     tmpfs:
       - /var/cache/nginx

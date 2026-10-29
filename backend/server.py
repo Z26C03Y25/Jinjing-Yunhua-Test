@@ -1,7 +1,7 @@
 """Stage-one offline IDS API. Suricata executes without shell or Docker socket."""
 import datetime as dt
 import re
-from queries import alerts, overview, detail
+from queries import alerts, overview, detail, aggregate_alerts
 import base64
 import concurrent.futures
 import hashlib
@@ -21,6 +21,7 @@ STATE = pathlib.Path(os.environ.get('STATE_DIR', '/state'))
 STATE.mkdir(parents=True, exist_ok=True)
 DB = STATE / 'events.sqlite'
 PASSWORD = os.environ.get('APP_PASSWORD', '')
+VIEWER_PASSWORD = os.environ.get('VIEWER_PASSWORD', '')
 POOL = concurrent.futures.ThreadPoolExecutor(max_workers=1)
 SLOTS = threading.BoundedSemaphore(4)
 RULES = pathlib.Path(os.environ.get('RULES_PATH', '/app/rules/local.rules'))
@@ -81,7 +82,13 @@ class API(BaseHTTPRequestHandler):
         try:
             scheme, encoded = self.headers.get('Authorization', '').split(' ', 1)
             value = base64.b64decode(encoded, validate=True).decode()
-            return scheme.lower() == 'basic' and hmac.compare_digest(value.encode(), ('analyst:' + PASSWORD).encode())
+            if scheme.lower() != 'basic':
+                return False
+            for actor, password in [('analyst', PASSWORD), ('viewer', VIEWER_PASSWORD)]:
+                if password and hmac.compare_digest(value.encode(), (actor + ':' + password).encode()):
+                    self.actor = actor
+                    return True
+            return False
         except (ValueError, UnicodeError):
             return False
 
@@ -92,6 +99,20 @@ class API(BaseHTTPRequestHandler):
         if not self.authorized():
             return self.send_json(401, {'error': '需要登录，用户名 analyst'})
         with database() as db:
+            if url.path == '/api/me':
+                return self.send_json(200, {'username': self.actor, 'readonly': self.actor == 'viewer'})
+            if url.path == '/api/groups':
+                query = parse_qs(url.query)
+                try:
+                    window = int(query.get('window', ['10'])[0])
+                    task = query.get('task_id', [''])[0]
+                    rows = db.execute("SELECT * FROM events WHERE event_type='alert' AND task_id=? ORDER BY timestamp,id LIMIT 50001", (task,)).fetchall()
+                    if len(rows) > 50000:
+                        return self.send_json(413, {'error': '单任务聚合上限为 50000 条'})
+                    groups = aggregate_alerts(rows, window)
+                    return self.send_json(200, {'raw_count': len(rows), 'group_count': len(groups), 'reduction_rate': 1-len(groups)/len(rows) if rows else 0, 'items': groups[:200], 'window_seconds': window})
+                except ValueError:
+                    return self.send_json(400, {'error': '聚合窗口应为 1 到 3600 秒整数'})
             if url.path == '/api/tasks':
                 return self.send_json(200, [dict(r) for r in db.execute('SELECT * FROM tasks ORDER BY rowid DESC LIMIT 100')])
             if url.path == '/api/overview':
@@ -118,6 +139,8 @@ class API(BaseHTTPRequestHandler):
             return self.send_json(403, {'error': 'cross_origin_request_rejected'})
         if not self.authorized():
             return self.send_json(401, {'error': 'unauthorized'})
+        if self.actor != 'analyst':
+            return self.send_json(403, {'error': '只读角色不能执行修改操作'})
         if self.path == '/api/rules' or re.fullmatch(r'/api/alerts/\d+/status', self.path):
             try:
                 size = int(self.headers.get('Content-Length', '0'))

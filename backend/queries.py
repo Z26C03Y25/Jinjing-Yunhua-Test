@@ -1,4 +1,22 @@
 import json
+import datetime as dt
+
+
+def aggregate_alerts(rows, seconds=10):
+    if not 1 <= seconds <= 3600:
+        raise ValueError('window must be between 1 and 3600 seconds')
+    groups = {}
+    for row in rows:
+        row = dict(row)
+        timestamp = dt.datetime.fromisoformat(row['timestamp'].replace('Z', '+00:00')).timestamp()
+        key = (row['task_id'], row['sid'], row['src_ip'], row['src_port'], row['dest_ip'], row['dest_port'], row['proto'], int(timestamp // seconds))
+        if key not in groups:
+            groups[key] = {**row, 'count': 0, 'first_seen': row['timestamp'], 'last_seen': row['timestamp']}
+        group = groups[key]
+        group['count'] += 1
+        group['first_seen'] = min(group['first_seen'], row['timestamp'])
+        group['last_seen'] = max(group['last_seen'], row['timestamp'])
+    return list(groups.values())
 
 
 def alerts(db, query):
