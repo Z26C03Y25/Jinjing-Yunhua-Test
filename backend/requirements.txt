@@ -1,0 +1,2 @@
+# Application uses Python standard library only.
+# Suricata and its native dependencies are installed as Debian packages.
