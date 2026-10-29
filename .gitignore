@@ -31,3 +31,4 @@ __pycache__/
 .audit-env/
 .audit-tools/
 .runtime-reports/
+tmp/
