@@ -1,55 +1,64 @@
-# Jinjing-Yunhua-Test
-金睛云华前期测试题：基于 Suricata · B/S 架构 流量威胁检测系统
+# 金睛云华 · 流量威胁检测系统
 
-## Windows → Ubuntu 同步
+基于 Suricata 的离线 PCAP 检测与告警研判系统。当前已跑通真实检测；这是持续完善中的赛题作品，不是生产部署。
 
-本地推送使用 GitHub SSH，服务器使用专用 SSH Deploy key 拉取。首次运行前在本机执行 `ssh-keygen -t ed25519`，按提示生成密钥（可以设置密钥口令），把 `%USERPROFILE%\.ssh\id_ed25519.pub` 的内容添加到 GitHub Settings → SSH and GPG keys → New SSH key。只上传 `.pub` 公钥，私钥留在本机。脚本会将当前仓库 origin 切换为 SSH 并先检查访问权限。
+## 快速开始（Ubuntu）
 
-在仓库目录打开 CMD，执行（无需安装 PowerShell 7）：
+准备 Docker Engine、Compose（支持 --wait）、git、python3、make 和可用镜像源；私有 GitHub 仓库需读取权限。
 
-```bat
-scripts\sync-remote.cmd
+```sh
+git clone git@github.com:Z26C03Y25/Jinjing-Yunhua-Test.git
+cd Jinjing-Yunhua-Test
+make up
 ```
 
-按中文提示输入服务器 IP、SSH 用户名（直接回车默认 root），随后按 SSH 的 password 提示输入服务器密码（输入时不显示字符）。首次连接请用云控制台核对服务器主机指纹。不要把密码发到聊天或写进仓库。
+首次初始化自动生成 .env 中的分析员/只读密码，终端显示一次；已有 .env 不覆盖。初次构建需要下载 Debian 和 Nginx 镜像及系统包。使用中科大 Debian 镜像；网络受限时可先通过 DaoCloud 拉取基础镜像再打回原标签。干净环境启动耗时尚未实测，不声明已达到十五分钟。
 
-如果本地 Git 尚未配置提交姓名或邮箱，脚本会中文提示填写，只保存到当前仓库，不修改全局配置。该信息用于 commit 作者署名，不是 GitHub 登录密码。
+浏览器访问服务器 HTTP 80。只发布业务端口 80，内部后端 8000 不对外开放。SSH 仅用于运维。宿主机已有 Nginx 占用 80 时需先协调端口。
 
-远程同步在当前 SSH 进程中隔离 Git 全局和系统配置，避免服务器的 `insteadOf` 把 HTTPS 改为 SSH 而出现 `Permission denied (publickey)`，不修改服务器现有配置。当前默认适用于公开仓库；私有仓库需要另行配置此同步进程可用的凭据，全局 credential helper 不会被读取。
-
-脚本将提交所有未忽略的本地修改、推送当前分支，再在 Ubuntu 的 `~/code/Jinjing-Yunhua-Test` 同步：首次自动创建 `~/code` 并 git clone，后续 git pull --ff-only 更新同一分支，核验 commit 和题目 DOCX 的 SHA256。`~` 指 SSH 登录用户的家目录。运行前请检查 `git status`，确保没有准备外的文件。Ubuntu 需预装 git、python3，并能够访问 GitHub；私有仓库还需提前在服务器配置 GitHub 读取凭据，服务器登录密码不能代替 GitHub 凭据。
-
-可选参数：
+## Windows 开发部署
 
 ```bat
-scripts\sync-remote.cmd -Server 203.0.113.10 -User ubuntu -Port 22 -SkipCommit
-scripts\sync-remote.cmd -RemoteDirectory projects/Jinjing-Yunhua-Test -Message "feat: update application"
-REM 后续项目具备 compose 配置且 Ubuntu 已安装 Docker Compose 后：
 scripts\sync-remote.cmd -Deploy
 ```
 
-`-SkipCommit` 只推送已有提交，不提交工作区修改。`-Deploy` 在同步校验成功后运行 `docker compose config --quiet`、`docker compose up -d --build` 和 `docker compose ps`。现已提供最小 Web Compose 环境，部署会等待 Web 健康检查通过（120 秒超时），失败时输出容器日志。检测引擎和后端尚未接入。
+中文交互输入 IP 和统一密码（适用于本地密钥口令与服务器密码相同），默认 root。Git 作者信息缺失时提示填写。同步到 ~/code/Jinjing-Yunhua-Test，首次克隆、以后快进拉取；服务器使用专用只读 Deploy key。脚本按 Git 提交标签构建后端，成功后下架旧容器并启动，核验健康和运行版本；不删除数据卷，不强制覆盖远程修改。基础镜像需提前准备。首次初始化可在 Ubuntu 运行 make up，后续通常只需此 Windows 命令。
 
-CMD 入口内部调用 Windows 自带的 PowerShell 执行同步逻辑，保留 `.ps1` 为实现文件。参数包含空格时请使用双引号。
+## 架构
 
-远程存在未提交修改、分支分叉、版本或文件校验不符时脚本会停止，不执行强制重置。首次 SSH 失败时本地提交可能已推送，解决连接问题后可加 `-SkipCommit` 重试。
+```mermaid
+flowchart LR
+  B[浏览器] --> N[Nginx 公网80]
+  N --> A[Python API 内部8000]
+  A --> P[独立任务PCAP目录]
+  P --> S[Suricata IDS离线回放]
+  S --> E[eve.json]
+  E --> C[归一化采集器]
+  C --> D[(SQLite 持久卷)]
+  D --> A
+```
 
-## 最小部署环境
+前端只读 API，不直接读取引擎输出。后端非 root 运行，未挂载 Docker socket。每任务记录原始事件及规则快照，避免不同回放相互污染。
 
-运行 `scripts\sync-remote.cmd -Deploy`。服务器需支持 Docker Compose 的 `--wait`，登录用户有 Docker 权限。
+## 功能与自验
 
-公网唯一业务入口为 TCP 80：`浏览器 → 宿主机 80 → web Nginx :8080 → /api/ → backend :8000`。两个容器在同一内部网络，后端无宿主机端口映射。当前 backend 是复用 Nginx 镜像的 API 连通占位服务，只提供 `/api/healthz`，尚无检测业务。后续替换为真实后端时沿用内部 8000 端口。
+- 上传经典 PCAP，任务状态、错误信息、真实告警。
+- 列表筛选、排序、分页、处置审计，详情规则与关联事件。
+- 总览统计、规则启停、只读角色、保留原始证据的固定时间桶聚合。
+- 四类攻击线索、自建生成脚本、正常样本和两个变异场景。
 
-部署后访问 `http://123.57.158.71/`、`http://123.57.158.71/api/healthz`。云安全组和服务器防火墙放行 TCP 80，无需放行 8080、8000。SSH 管理通道仍需对管理来源保留访问，否则同步脚本无法连接。如果宿主机已有 Nginx 占用 80，请先协调已有服务配置，当前方案由 Compose Nginx 直接接管 80。
+```sh
+make test
+make validate
+make down
+```
 
-如果服务器已存在 `.env`，请将 `WEB_BIND=0.0.0.0`、`WEB_PORT=80` 更新后再部署；该文件不会被 Git 覆盖。
+validate 会启动环境，再询问分析员密码，回放全部样本，输出 validation/report.json 和 report.md。当前实际结果：六项期望命中、一项慢扫 FN；两个正常样本无告警。详见 docs/自验报告.md，不把样本精确率扩大为未知流量检出能力。
 
-镜像由用户手动准备：`docker pull nginx:1.28.0-alpine`。两个服务复用此镜像，无需额外下载。脚本只使用已有镜像，不下载、不构建；缺少镜像时立即退出。
+## 设计取舍与已知缺陷
 
-部署顺序：检查 Compose 配置及镜像 → `docker compose down --remove-orphans` 下架当前项目旧容器 → 启动新版并等待健康检查。不使用 `-v`，保留数据卷。更新期间存在短暂停机；新版启动失败会输出日志，不会自动回滚。
+SQLite 降低部署复杂度，单 worker 和四项队列限制引擎资源；不适合高并发。Suricata 与 API 同镜像避免 Docker socket 风险，代价是系统依赖构建。规则是可疑行为特征，不证明入侵成功。
 
-## 自动构建与版本校验
+仍需完善：页面视觉与图表、首攻击包至入库时延、业务聚合去重率汇入报告、依赖漏洞审计、磁盘配额、登录限流、清洁环境复验。只暴露 HTTP 80 的演示环境不提供传输加密。正常样本 DNS 仅查询，TLS 仅 ClientHello。具体安全审查见 agent-log/review.md。最终录屏和实际工时不得伪造。
 
-当前 `scripts\sync-remote.cmd -Deploy` 自动同步、按 Git 提交版本构建后端镜像（优先复用本地缓存），构建成功后才下架旧容器，随后启动并等待健康检查，最后核对运行中镜像的提交标签。失败的构建不会下架旧服务。后续无需手动执行 docker build。
-
-首次环境仍需 Docker、基础镜像和 APP_PASSWORD 配置；后续交付初始化流程将进一步统一。仅健康检查通过不能证明镜像是新版，必须同时看到“后端版本核验通过”。
+目录沿用题面：rules、backend、frontend、data、validation、agent-log、docs；开发关键提交与真实错误记录保留。初始化脚本尚待远程空环境验证，不能将既有环境的成功当作全新环境验证。
