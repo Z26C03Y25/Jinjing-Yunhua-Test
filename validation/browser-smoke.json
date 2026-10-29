@@ -1,5 +1,5 @@
 {
-  "tested_at": "2026-10-29T03:31:46.726Z",
+  "tested_at": "2026-10-29T03:39:14.247Z",
   "url": "http://123.57.158.71",
   "login": true,
   "navigation": true,
@@ -8,5 +8,8 @@
   "xss_text_only": true,
   "rules": true,
   "mobile_no_overflow": true,
-  "task": "98c4d188f8e440d2aa53e1c21cba8d36"
+  "dual_views": true,
+  "analyst_notes_saved": true,
+  "both_reports_downloaded": true,
+  "task": "241d081e278e41768642296294f2b945"
 }
