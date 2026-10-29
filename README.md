@@ -59,6 +59,6 @@ validate 会启动环境，再询问分析员密码，回放全部样本，输�
 
 SQLite 降低部署复杂度，单 worker 和四项队列限制引擎资源；不适合高并发。Suricata 与 API 同镜像避免 Docker socket 风险，代价是系统依赖构建。规则是可疑行为特征，不证明入侵成功。
 
-仍需完善：页面视觉与图表、首攻击包至入库时延、业务聚合去重率汇入报告、依赖漏洞审计、磁盘配额、登录限流、清洁环境复验。只暴露 HTTP 80 的演示环境不提供传输加密。正常样本 DNS 仅查询，TLS 仅 ClientHello。具体安全审查见 agent-log/review.md。最终录屏和实际工时不得伪造。
+已完成统计图表、聚合指标、应用 pip 审计和独立空卷验收。仍需完善完整浏览器视觉测试、系统包漏洞审计、磁盘配额、登录限流及无缓存全新操作系统复验。只暴露 HTTP 80 的演示环境不提供传输加密。正常样本 DNS 仅查询，TLS 仅 ClientHello。具体安全审查见 agent-log/review.md。最终录屏和实际工时不得伪造。
 
-目录沿用题面：rules、backend、frontend、data、validation、agent-log、docs；开发关键提交与真实错误记录保留。初始化脚本尚待远程空环境验证，不能将既有环境的成功当作全新环境验证。
+目录沿用题面：rules、backend、frontend、data、validation、agent-log、docs；开发关键提交与真实错误记录保留。初始化脚本已在独立目录、端口和空数据卷验证成功（24 秒，使用镜像缓存）；不等同无缓存全新服务器验收，详见 docs/acceptance-result.md。
