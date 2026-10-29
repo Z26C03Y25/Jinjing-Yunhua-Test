@@ -113,6 +113,9 @@ class API(BaseHTTPRequestHandler):
         return self.send_json(404, {'error': 'not_found'})
 
     def do_POST(self):
+        origin = self.headers.get('Origin')
+        if origin and urlsplit(origin).netloc != self.headers.get('Host'):
+            return self.send_json(403, {'error': 'cross_origin_request_rejected'})
         if not self.authorized():
             return self.send_json(401, {'error': 'unauthorized'})
         if self.path == '/api/rules' or re.fullmatch(r'/api/alerts/\d+/status', self.path):

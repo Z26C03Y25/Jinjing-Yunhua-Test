@@ -33,10 +33,13 @@ def evaluate(truth, alerts):
     matched_alerts = len(alerts) - len(fp)
     precision = matched_alerts / len(alerts) if alerts else None
     recall = tp / len(expected) if expected else None
-    f1 = 2 * precision * recall / (precision + recall) if precision is not None and recall is not None and precision + recall else (0 if expected else None)
+    # One unexpected alert group is one false finding; repeated packets are not separate findings.
+    fp_groups = {(a['sid'], a['src_ip'], a.get('src_port'), a['dest_ip'], a['dest_port'], a['proto'], int(timestamp(a['timestamp']).timestamp()) // 10) for a in fp}
+    finding_precision = tp / (tp + len(fp_groups)) if tp + len(fp_groups) else None
+    f1 = 2 * finding_precision * recall / (finding_precision + recall) if finding_precision is not None and recall is not None and finding_precision + recall else (0 if expected else None)
     return {'scenario': truth['scenario'], 'tp_expectations': tp, 'fn_expectations': len(expected)-tp,
             'matched_alerts': matched_alerts, 'fp_alerts': len(fp), 'precision_alert_level': precision,
-            'recall_expectation_level': recall, 'f1_mixed_units': f1, 'false_positives': fp}
+            'recall_expectation_level': recall, 'precision_finding_level': finding_precision, 'fp_findings': len(fp_groups), 'f1_finding_level': f1, 'false_positives': fp}
 
 
 def main():
@@ -55,6 +58,7 @@ def main():
     results = []
     for path in sorted((ROOT / 'validation/ground_truth').glob('*.json')):
         truth = json.loads(path.read_text(encoding='utf-8'))
+        started = time.monotonic()
         task = api('/tasks', (ROOT / 'data' / truth['pcap']).read_bytes())['id']
         deadline = time.monotonic() + 300
         while True:
@@ -75,9 +79,13 @@ def main():
             page += 1
         result = evaluate(truth, found)
         result['task_id'] = task
+        result['client_observed_completion_ms'] = round((time.monotonic() - started) * 1000, 2)
         results.append(result)
-    report = {'generated_at': dt.datetime.now(dt.timezone.utc).isoformat(), 'results': results,
-              'limitations': ['已覆盖 Web、扫描、异常 DNS、HTTP 认证失败四类线索；正常基线的 DNS 仅查询、TLS 仅 ClientHello，不含完整握手', 'F1 为告警级精确率与期望级召回率的混合值，字段显式标注；最终报告需统一统计口径', '时延、去重率及变异测试尚未纳入']}
+    summary = {'matched_alerts': sum(r['matched_alerts'] for r in results), 'fp_alerts': sum(r['fp_alerts'] for r in results), 'tp_expectations': sum(r['tp_expectations'] for r in results), 'fn_expectations': sum(r['fn_expectations'] for r in results)}
+    summary['precision_alert_level'] = summary['matched_alerts'] / (summary['matched_alerts'] + summary['fp_alerts']) if summary['matched_alerts'] + summary['fp_alerts'] else None
+    summary['recall_expectation_level'] = summary['tp_expectations'] / (summary['tp_expectations'] + summary['fn_expectations']) if summary['tp_expectations'] + summary['fn_expectations'] else None
+    report = {'summary': summary, 'metric_definition': '原始告警精确率单列；finding 精确率/召回率/F1 使用期望命中项与同 SID 五元组十秒窗的误报组计数。完成耗时为客户端提交到收齐结果，含排队、网络和轮询，不是首攻击包到入库时延。', 'generated_at': dt.datetime.now(dt.timezone.utc).isoformat(), 'results': results,
+              'limitations': ['已覆盖 Web、扫描、异常 DNS、HTTP 认证失败四类线索；正常基线的 DNS 仅查询、TLS 仅 ClientHello，不含完整握手', 'finding 聚合只用于评测误报计数，尚非业务告警抑制功能', '未实现业务去重率；离线抓包历史时间与处理时间分开，不用历史包到当前日期的差值冒充检测耗时']}
     (ROOT / 'validation/report.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
     lines = ['# 真实 API 自验结果', '', '| 场景 | 期望 TP | 期望 FN | 告警 FP |', '| --- | --- | --- | --- |']
     lines += [f"| {r['scenario']} | {r['tp_expectations']} | {r['fn_expectations']} | {r['fp_alerts']} |" for r in results]
