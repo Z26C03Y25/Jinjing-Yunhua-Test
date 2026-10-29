@@ -1,6 +1,7 @@
 import json
 import datetime as dt
 import re
+from collector import normalize
 
 
 def aggregate_alerts(rows, seconds=10):
@@ -56,8 +57,14 @@ def detail(db, event_id):
     if not row:
         return None
     result = dict(row)
+    metadata = db.execute('SELECT * FROM protocol_metadata WHERE event_id=?', (event_id,)).fetchone()
     raw = json.loads(row['raw_json'])
-    result['payload'] = raw.get('payload_printable') or raw.get('alert', {}).get('payload_printable')
+    if metadata:
+        result['protocol_metadata'] = dict(metadata)
+    else:
+        names = [r[1] for r in db.execute('PRAGMA table_info(protocol_metadata)')][1:]
+        result['protocol_metadata'] = dict(zip(names, normalize(raw)))
+    result['payload'] = result['protocol_metadata']['payload_excerpt']
     result['related'] = [json.loads(r[0]) for r in db.execute("SELECT raw_json FROM events WHERE task_id=? AND flow_id=? AND event_type IN ('flow','http','dns','tls') ORDER BY id LIMIT 50", (row['task_id'], row['flow_id']))]
     result['audit'] = [dict(r) for r in db.execute('SELECT status,actor,changed_at FROM audit WHERE event_id=? ORDER BY id', (event_id,))]
     return result

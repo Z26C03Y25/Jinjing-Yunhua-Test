@@ -2,10 +2,19 @@ import json
 import pathlib
 import tempfile
 import unittest
-from collector import connect, import_eve
+from collector import connect, import_eve, normalize
 
 
 class CollectorTest(unittest.TestCase):
+    def test_protocol_metadata_and_payload_precedence(self):
+        value = normalize({'app_proto': 'http', 'http': {'hostname': 'lab.example', 'url': '/x', 'http_method': 'GET', 'status': 401}, 'payload': 'PGltZz4=', 'flow': {'bytes_toserver': 123}})
+        self.assertEqual(value[1:5], ('lab.example', '/x', 'GET', 401))
+        self.assertEqual(value[-1], '<img>')
+        self.assertEqual(value[-3], 123)
+        self.assertIn('not raw payload', normalize({'http': {'url': '/x'}})[-1])
+        self.assertEqual(normalize({'tls': {'sni': 'lab.example'}})[7], 'lab.example')
+        self.assertEqual(normalize({'dns': {'rrname': 'lab.example'}})[5], 'lab.example')
+
     def test_task_isolation_idempotency_and_rollback(self):
         with tempfile.TemporaryDirectory(dir=pathlib.Path(__file__).parent) as temp:
             path = pathlib.Path(temp) / 'eve.json'
