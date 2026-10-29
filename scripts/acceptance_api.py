@@ -40,6 +40,9 @@ report = json.loads((root / 'validation/report.json').read_text())
 checks['nine_scenarios_completed'] = len(report['results']) == 9
 checks['known_slow_scan_fn'] = next(r for r in report['results'] if r['scenario'] == 'scan_slow')['fn_expectations'] == 1
 checks['benign_clean'] = all(r['fp_alerts'] == 0 for r in report['results'] if r['scenario'].startswith('benign'))
+for _ in range(10):
+    request('/me', user='invalid')
+checks['authentication_failure_throttled'] = request('/me', user='invalid')[0] == 429
 result = {'checks': checks, 'all_passed': all(checks.values()), 'elapsed_seconds': int(time.time())-int(os.environ['ACCEPTANCE_STARTED']), 'scope': '空容器和数据卷、已有基础镜像缓存；不是空操作系统或无缓存镜像环境', 'validation': report}
 (root / 'validation/acceptance-report.json').write_text(json.dumps(result, ensure_ascii=False, indent=2))
 print(json.dumps({'checks': checks, 'elapsed_seconds': result['elapsed_seconds']}, ensure_ascii=False))

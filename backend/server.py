@@ -13,6 +13,7 @@ import sqlite3
 import subprocess
 import threading
 import uuid
+from security import FailureLimiter
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit, parse_qs
 from collector import connect, import_eve
@@ -26,6 +27,7 @@ POOL = concurrent.futures.ThreadPoolExecutor(max_workers=1)
 SLOTS = threading.BoundedSemaphore(4)
 RULES = pathlib.Path(os.environ.get('RULES_PATH', '/app/rules/local.rules'))
 RULE_LOCK = threading.Lock()
+AUTH_FAILURES = FailureLimiter()
 
 def rule_list():
     with database() as db:
@@ -79,25 +81,31 @@ class API(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
     def authorized(self):
+        key = self.headers.get('X-Real-IP') or self.client_address[0]
+        self.auth_limited = AUTH_FAILURES.blocked(key)
+        if self.auth_limited:
+            return False
         try:
             scheme, encoded = self.headers.get('Authorization', '').split(' ', 1)
             value = base64.b64decode(encoded, validate=True).decode()
             if scheme.lower() != 'basic':
-                return False
+                raise ValueError('unsupported authentication scheme')
             for actor, password in [('analyst', PASSWORD), ('viewer', VIEWER_PASSWORD)]:
                 if password and hmac.compare_digest(value.encode(), (actor + ':' + password).encode()):
                     self.actor = actor
+                    AUTH_FAILURES.reset(key)
                     return True
-            return False
         except (ValueError, UnicodeError):
-            return False
+            pass
+        AUTH_FAILURES.record_failure(key)
+        return False
 
     def do_GET(self):
         url = urlsplit(self.path)
         if url.path == '/api/healthz':
             return self.send_json(200, {'status': 'ok', 'service': 'offline-ids'})
         if not self.authorized():
-            return self.send_json(401, {'error': '需要登录，用户名 analyst'})
+            return self.send_json(429 if self.auth_limited else 401, {'error': '登录失败过多，请一分钟后重试' if self.auth_limited else '需要登录，用户名 analyst'})
         with database() as db:
             if url.path == '/api/me':
                 return self.send_json(200, {'username': self.actor, 'readonly': self.actor == 'viewer'})
@@ -138,7 +146,7 @@ class API(BaseHTTPRequestHandler):
         if origin and urlsplit(origin).netloc != self.headers.get('Host'):
             return self.send_json(403, {'error': 'cross_origin_request_rejected'})
         if not self.authorized():
-            return self.send_json(401, {'error': 'unauthorized'})
+            return self.send_json(429 if self.auth_limited else 401, {'error': '登录失败过多，请一分钟后重试' if self.auth_limited else 'unauthorized'})
         if self.actor != 'analyst':
             return self.send_json(403, {'error': '只读角色不能执行修改操作'})
         if self.path == '/api/rules' or re.fullmatch(r'/api/alerts/\d+/status', self.path):
