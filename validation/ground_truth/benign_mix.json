@@ -1,0 +1,1 @@
+{"pcap":"benign_mix.pcap","scenario":"benign_mix","benign":true,"expected_alerts":[],"description":"150 HTTP 会话、100 条短域名 DNS 查询、50 条 TLS ClientHello TCP 会话，共 2100 包","known_limitations":["TLS 仅 ClientHello，不含服务器证书和完整 TLS 握手；DNS 仅查询，后续需要补充完整响应"]}

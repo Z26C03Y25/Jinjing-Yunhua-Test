@@ -77,7 +77,7 @@ def main():
         result['task_id'] = task
         results.append(result)
     report = {'generated_at': dt.datetime.now(dt.timezone.utc).isoformat(), 'results': results,
-              'limitations': ['当前攻击类别为 Web、扫描、异常 DNS，尚缺第四类攻击；正常基线尚缺 DNS/TLS', 'F1 为告警级精确率与期望级召回率的混合值，字段显式标注；最终报告需统一统计口径', '时延、去重率及变异测试尚未纳入']}
+              'limitations': ['已覆盖 Web、扫描、异常 DNS、HTTP 认证失败四类线索；正常基线的 DNS 仅查询、TLS 仅 ClientHello，不含完整握手', 'F1 为告警级精确率与期望级召回率的混合值，字段显式标注；最终报告需统一统计口径', '时延、去重率及变异测试尚未纳入']}
     (ROOT / 'validation/report.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
     lines = ['# 真实 API 自验结果', '', '| 场景 | 期望 TP | 期望 FN | 告警 FP |', '| --- | --- | --- | --- |']
     lines += [f"| {r['scenario']} | {r['tp_expectations']} | {r['fn_expectations']} | {r['fp_alerts']} |" for r in results]

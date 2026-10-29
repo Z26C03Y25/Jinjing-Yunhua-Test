@@ -3,6 +3,8 @@
 | 场景 | 期望 TP | 期望 FN | 告警 FP |
 | --- | --- | --- | --- |
 | benign_http | 0 | 0 | 0 |
+| benign_mix | 0 | 0 | 0 |
+| brute_http | 1 | 0 | 0 |
 | dns_long | 1 | 0 | 0 |
 | scan_slow | 0 | 1 | 0 |
 | scan_syn | 1 | 0 | 0 |

@@ -27,14 +27,24 @@ def packet(src, dst, sport, dport, seq, ack, flags, payload=b''):
     return bytes.fromhex('0200000000050200000000660800') + ip + tcp + payload
 
 
-def session(index, uri, unauthorized=False):
+def session(index, uri, unauthorized=False, tls=False):
     a, b, port = '10.0.0.66', '10.0.0.5', 40000 + index
     request = f'GET {uri} HTTP/1.1\r\nHost: lab.example\r\nConnection: close\r\n\r\n'.encode('ascii')
     response = b'HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nOK'
     if unauthorized:
         response = b'HTTP/1.1 401 Unauthorized\r\nContent-Length: 0\r\nConnection: close\r\n\r\n'
-    client = lambda s, ack, f, p=b'': packet(a, b, port, 80, s, ack, f, p)
-    server = lambda s, ack, f, p=b'': packet(b, a, 80, port, s, ack, f, p)
+    if tls:
+        hostname = b'lab.example'
+        names = b'\0' + struct.pack('!H', len(hostname)) + hostname
+        sni = struct.pack('!H', len(names)) + names
+        extensions = struct.pack('!HH', 0, len(sni)) + sni
+        hello = b'\x03\x03' + bytes(range(32)) + b'\0' + b'\0\x02\xc0\x2f' + b'\x01\0' + struct.pack('!H', len(extensions)) + extensions
+        handshake = b'\x01' + len(hello).to_bytes(3, 'big') + hello
+        request = b'\x16\x03\x01' + struct.pack('!H', len(handshake)) + handshake
+        response = b''  # ClientHello-only baseline, not a completed TLS exchange.
+    dport = 443 if tls else 80
+    client = lambda s, ack, f, p=b'': packet(a, b, port, dport, s, ack, f, p)
+    server = lambda s, ack, f, p=b'': packet(b, a, dport, port, s, ack, f, p)
     c, s = 1001 + len(request), 9001 + len(response)
     return [client(1000, 0, 2), server(9000, 1001, 18), client(1001, 9001, 16),
             client(1001, 9001, 24, request), server(9001, c, 16),
@@ -73,6 +83,16 @@ def generate_extended():
         ip = ip[:10] + struct.pack('!H', checksum(ip)) + ip[12:]
         dns.append((START+i//50, bytes.fromhex('0200000000050200000000660800') + ip + udp))
     scenarios['dns_long'] = dns
+    short_dns = []
+    for i in range(100):
+        query = b'\x03lab\x07example\0'
+        payload = struct.pack('!HHHHHH', i, 256, 1, 0, 0, 0) + query + struct.pack('!HH', 1, 1)
+        udp = struct.pack('!HHHH', 46000+i, 53, len(payload)+8, 0) + payload
+        ip = struct.pack('!BBHHHBBH4s4s', 69, 0, 20+len(udp), i, 0, 64, 17, 0, socket.inet_aton('10.0.0.66'), socket.inet_aton('10.0.0.5'))
+        ip = ip[:10] + struct.pack('!H', checksum(ip)) + ip[12:]
+        short_dns.append((START+300+i, bytes.fromhex('0200000000050200000000660800')+ip+udp))
+    scenarios['benign_mix'] = ([(START+i, p) for i in range(150) for p in session(i, '/catalog')]
+                               + short_dns + [(START+500+i, p) for i in range(50) for p in session(200+i, '/', tls=True)])
     scenarios['brute_http'] = [(START+(i//2 if i<15 else i), p) for i in range(150) for p in session(i, '/login' if i<15 else '/catalog', unauthorized=i<15)]
     for name, uri in [('web_xss', '/search?q=%3Cscript%3Ealert(1)%3C/script%3E'), ('web_sqli_case', '/search?q=1%20uNiOn%20sElEcT%20password')]:
         scenarios[name] = [(START+i, p) for i in range(150) for p in session(i, uri if i == 0 else '/catalog')]

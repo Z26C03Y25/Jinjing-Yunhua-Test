@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-29T02:07:59.811874+00:00",
+  "generated_at": "2026-10-29T02:12:21.382543+00:00",
   "results": [
     {
       "scenario": "benign_http",
@@ -11,7 +11,31 @@
       "recall_expectation_level": null,
       "f1_mixed_units": null,
       "false_positives": [],
-      "task_id": "4d951591f9494e95b96da925ef508163"
+      "task_id": "ce25d9a192cf431ca2a4be8e97ca1ef8"
+    },
+    {
+      "scenario": "benign_mix",
+      "tp_expectations": 0,
+      "fn_expectations": 0,
+      "matched_alerts": 0,
+      "fp_alerts": 0,
+      "precision_alert_level": null,
+      "recall_expectation_level": null,
+      "f1_mixed_units": null,
+      "false_positives": [],
+      "task_id": "7e07341884574f3dbed60739b2112161"
+    },
+    {
+      "scenario": "brute_http",
+      "tp_expectations": 1,
+      "fn_expectations": 0,
+      "matched_alerts": 10,
+      "fp_alerts": 0,
+      "precision_alert_level": 1.0,
+      "recall_expectation_level": 1.0,
+      "f1_mixed_units": 1.0,
+      "false_positives": [],
+      "task_id": "265e94aa9a5649099e224004deab2059"
     },
     {
       "scenario": "dns_long",
@@ -23,7 +47,7 @@
       "recall_expectation_level": 1.0,
       "f1_mixed_units": 1.0,
       "false_positives": [],
-      "task_id": "ba6d0d4d83d64cb3b40ca4daeba66d3b"
+      "task_id": "1b087b1ef02d4a2694354b09edeff633"
     },
     {
       "scenario": "scan_slow",
@@ -35,7 +59,7 @@
       "recall_expectation_level": 0.0,
       "f1_mixed_units": 0,
       "false_positives": [],
-      "task_id": "6a275af72ca14619a38492df018003f0"
+      "task_id": "de1b52e39e5546b98aabb1cd23c4fc4c"
     },
     {
       "scenario": "scan_syn",
@@ -47,7 +71,7 @@
       "recall_expectation_level": 1.0,
       "f1_mixed_units": 1.0,
       "false_positives": [],
-      "task_id": "17528a97c904415ba841835715eb4c63"
+      "task_id": "9d7505fb66314ad69de6c64084b57cb2"
     },
     {
       "scenario": "web_sqli",
@@ -59,7 +83,7 @@
       "recall_expectation_level": 1.0,
       "f1_mixed_units": 1.0,
       "false_positives": [],
-      "task_id": "8d4bfedd526840ccb908cd51a6802521"
+      "task_id": "b99e9cc8a61f4b32bdabce8c68c21e75"
     },
     {
       "scenario": "web_sqli_case",
@@ -71,7 +95,7 @@
       "recall_expectation_level": 1.0,
       "f1_mixed_units": 1.0,
       "false_positives": [],
-      "task_id": "dcb791e7044d40deb7f282723e8ea6ba"
+      "task_id": "93abbd131f59401b94a104e6552816aa"
     },
     {
       "scenario": "web_xss",
@@ -83,11 +107,11 @@
       "recall_expectation_level": 1.0,
       "f1_mixed_units": 1.0,
       "false_positives": [],
-      "task_id": "1256c156f30442e49ce7a2b00a766a60"
+      "task_id": "755c4687815c45809aabdf5ff043c87c"
     }
   ],
   "limitations": [
-    "当前攻击类别为 Web、扫描、异常 DNS，尚缺第四类攻击；正常基线尚缺 DNS/TLS",
+    "已覆盖 Web、扫描、异常 DNS、HTTP 认证失败四类线索；正常基线的 DNS 仅查询、TLS 仅 ClientHello，不含完整握手",
     "F1 为告警级精确率与期望级召回率的混合值，字段显式标注；最终报告需统一统计口径",
     "时延、去重率及变异测试尚未纳入"
   ]
