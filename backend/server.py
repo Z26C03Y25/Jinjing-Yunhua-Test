@@ -13,6 +13,7 @@ import sqlite3
 import subprocess
 import threading
 import uuid
+from contextlib import contextmanager
 from security import FailureLimiter
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit, parse_qs
@@ -35,8 +36,14 @@ def rule_list():
     return [{'sid': int(re.search(r'sid:(\d+);', line)[1]), 'raw': line, 'enabled': bool(states.get(int(re.search(r'sid:(\d+);', line)[1]), 1))} for line in RULES.read_text().splitlines() if line.startswith('alert ')]
 
 
+@contextmanager
 def database():
-    return connect(DB)
+    connection = connect(DB)
+    try:
+        with connection:
+            yield connection
+    finally:
+        connection.close()
 
 
 with database() as db:

@@ -1,5 +1,12 @@
 # 已实际发生的 Agent 实现问题
 
+## B6：事务上下文没有关闭 SQLite 连接
+
+- 现象：新增真实 HTTP 安全测试的接口断言通过，但 Windows 清理临时 SQLite 文件时失败，文件仍被打开。
+- 原因：sqlite3 的 `with connection` 仅提交/回滚事务，不自动 close；原 server.database 直接返回连接。
+- 修复：用 contextmanager 包装事务并在 finally 中显式关闭连接，保留采集器事务逻辑。
+- 验证：七项本地回归含真实回环 HTTP 测试全部通过，临时目录正常清理。新增测试使用固定虚构测试凭据，不是实际服务器密码。
+
 ## B5：未核实 Debian 12 的 Suricata 包来源
 
 - 现象：软件源索引成功下载，但普通 bookworm 源没有 suricata 安装候选版本。
