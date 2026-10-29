@@ -8,3 +8,6 @@ validation
 agent-log
 docs
 题目
+.audit-tools
+.audit-env
+.runtime-reports

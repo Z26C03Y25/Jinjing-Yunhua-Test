@@ -6,6 +6,7 @@ import getpass
 import json
 import os
 import pathlib
+import re
 import time
 import urllib.request
 
@@ -13,7 +14,9 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 
 def timestamp(value):
-    return dt.datetime.fromisoformat(value.replace('Z', '+00:00'))
+    value = value.replace('Z', '+00:00')
+    value = re.sub(r'([+-]\d{2})(\d{2})$', r'\1:\2', value)
+    return dt.datetime.fromisoformat(value)
 
 
 def match(alert, expected):

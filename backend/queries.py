@@ -1,5 +1,6 @@
 import json
 import datetime as dt
+import re
 
 
 def aggregate_alerts(rows, seconds=10):
@@ -8,7 +9,8 @@ def aggregate_alerts(rows, seconds=10):
     groups = {}
     for row in rows:
         row = dict(row)
-        timestamp = dt.datetime.fromisoformat(row['timestamp'].replace('Z', '+00:00')).timestamp()
+        value = re.sub(r'([+-]\d{2})(\d{2})$', r'\1:\2', row['timestamp'].replace('Z', '+00:00'))
+        timestamp = dt.datetime.fromisoformat(value).timestamp()
         key = (row['task_id'], row['sid'], row['src_ip'], row['src_port'], row['dest_ip'], row['dest_port'], row['proto'], int(timestamp // seconds))
         if key not in groups:
             groups[key] = {**row, 'count': 0, 'first_seen': row['timestamp'], 'last_seen': row['timestamp']}
