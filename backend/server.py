@@ -10,6 +10,7 @@ import json
 import os
 import pathlib
 import sqlite3
+import shutil
 import subprocess
 import threading
 import uuid
@@ -246,6 +247,9 @@ class API(BaseHTTPRequestHandler):
             return self.send_json(400, {'error': 'invalid_length'})
         if self.headers.get('Transfer-Encoding') or not 24 <= size <= 20 * 1024 * 1024:
             return self.send_json(413, {'error': '请上传 24 字节至 20 MB 的 PCAP 文件'})
+        # Reserve room for EVE output and SQLite, rather than accepting into a full disk.
+        if shutil.disk_usage(STATE).free < max(512 * 1024 * 1024, size * 20):
+            return self.send_json(507, {'error': '证据存储可用空间不足，请先备份并由管理员处理容量'})
         if not SLOTS.acquire(blocking=False):
             return self.send_json(429, {'error': '队列已满，请稍后重试'})
         try:

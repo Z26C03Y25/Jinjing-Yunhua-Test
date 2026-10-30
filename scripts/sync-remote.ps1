@@ -9,6 +9,7 @@ param(
     [string]$Message = 'chore: sync local changes to Ubuntu',
     [switch]$Deploy,
     [switch]$Acceptance,
+    [switch]$Backup,
     [switch]$SkipCommit
 )
 $ErrorActionPreference = 'Stop'
@@ -248,10 +249,14 @@ if [ '__DEPLOY__' = 1 ]; then
     echo "后端版本核验通过：$running_revision"
     echo '部署完成，Web 健康检查已通过。默认公网 HTTP 入口为 80，后端仅内部访问；如有 .env 请核对端口配置。'
 fi
+'__BACKUP__' && sh scripts/backup-drill.sh
 '__ACCEPTANCE__' && sh scripts/acceptance.sh
 '@
+    $backupCommand = if ($Backup) { 'true' } else { 'false' }
+    $remoteScript = $remoteScript.Replace("'__BACKUP__' && sh scripts/backup-drill.sh", "if $backupCommand; then sh scripts/backup-drill.sh; fi")
     $acceptanceCommand = if ($Acceptance) { 'true' } else { 'false' }
-    $remoteScript = $remoteScript.Replace("'__ACCEPTANCE__' && sh scripts/acceptance.sh", "if $acceptanceCommand; then sh scripts/acceptance.sh; fi")
+    $remoteScript = $remoteScript.Replace("'__BACKUP__' && sh scripts/backup-drill.sh
+'__ACCEPTANCE__' && sh scripts/acceptance.sh", "if $acceptanceCommand; then sh scripts/acceptance.sh; fi")
     $remoteScript = $remoteScript.Replace('__REPO__', $repo).Replace('__BRANCH__', $branch).Replace('__DIRECTORY__', $RemoteDirectory).Replace('__REVISION__', $revision).Replace('__HASH__', $questionHash).Replace('__DEPLOY__', $deployValue).Replace("`r`n", "`n")
     $encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($remoteScript))
     Write-Host "即将连接 $User@$Server，代码目录：~/$RemoteDirectory"

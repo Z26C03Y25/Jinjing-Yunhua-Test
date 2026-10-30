@@ -7,6 +7,8 @@ import pathlib
 import tempfile
 import threading
 import unittest
+from unittest.mock import patch
+from collections import namedtuple
 import urllib.error
 import urllib.request
 from http.server import ThreadingHTTPServer
@@ -73,6 +75,12 @@ class HTTPSecurityTest(unittest.TestCase):
         self.assertEqual(self.request('/api/rules', {'sid': '1000001;touch /tmp/injected', 'enabled': True})[0], 400)
         self.assertEqual(self.request('/api/rules', {'sid': 1000001, 'enabled': 'false'})[0], 400)
         self.assertEqual(self.request('/api/alerts?src_ip=%27%20OR%201=1--')[1]['total'], 0)
+        self.assertEqual(self.request('/api/tasks')[1], [])
+
+    def test_low_disk_rejects_upload_before_creating_task(self):
+        usage = namedtuple('usage', 'total used free')(1000, 999, 1)
+        with patch.object(self.module.shutil, 'disk_usage', return_value=usage):
+            self.assertEqual(self.request('/api/tasks', b'x'*24)[0], 507)
         self.assertEqual(self.request('/api/tasks')[1], [])
 
     def test_notes_are_versioned_and_readonly_cannot_write(self):
