@@ -1,0 +1,16 @@
+{
+  "tested_at": "2026-10-30T13:10:50.333Z",
+  "local_preview": false,
+  "passed": true,
+  "checks": [
+    "separate_login_page",
+    "deep_link_guard",
+    "invalid_login_rejected",
+    "enter_key_login",
+    "module_toolbar_edit",
+    "module_toolbar_delete_confirmation",
+    "no_duplicate_tabs",
+    "logout_clears_data",
+    "mobile_login_layout"
+  ]
+}

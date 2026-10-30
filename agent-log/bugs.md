@@ -49,3 +49,7 @@ AI首次使用docker compose run --tmpfs；实际服务器返回unknown flag，�
 
 首次修复tmpfs参数后恢复成功，但命令正常结束却没有后续独立验收输出。排查发现远程脚本通过管道送给bash，docker compose run默认附带stdin，可能读走后续命令。两处维护容器调用均显式从/dev/null读取，再重跑串联路径验证。只检查退出码无法发现这种漏执行。
 
+# 2026-10-30：独立登录页被浏览器原生认证框干扰
+
+真实Chrome错误密码测试等待页面错误提示超时。原API的401总带WWW-Authenticate，触发浏览器原生Basic认证交互，使自建登录流程无法正常结束。前端请求标识XMLHttpRequest，后端仅对这类请求省略challenge，仍返回401且继续校验角色和密码；非XHR客户端行为保留。服务器实测错误密码、回车登录、深链接保护、退出清理通过，检测与CRUD回归通过。
+
