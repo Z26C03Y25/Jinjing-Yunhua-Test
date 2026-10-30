@@ -13,8 +13,8 @@ docker compose run --rm --no-deps --user 0:0 -v "$directory:/backup" backend \
 docker compose start backend
 trap - EXIT INT TERM
 # This restoration cannot touch the live volume: target is independent tmpfs.
-docker compose run --rm --no-deps --user 0:0 --tmpfs /restore -v "$directory:/backup:ro" backend \
-    python3 /app/maintenance.py restore --state /restore --archive "/backup/$archive" \
+docker compose run --rm --no-deps --user 0:0 -v "$directory:/backup:ro" backend \
+    python3 /app/maintenance.py restore --state /tmp/restore --archive "/backup/$archive" \
     > .runtime-reports/backup-drill.json
 cat .runtime-reports/backup-drill.json
 echo "Backup verified: $directory/$archive"
