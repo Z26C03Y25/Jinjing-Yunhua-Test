@@ -37,3 +37,11 @@
 - 初版将 web 和 backend 都只放在 internal 网络，用户浏览器访问失败。
 - 修复：web 加入 edge 桥接网络，同时保留 app 内部网络；backend 只加入 app。
 - 验证：用户后续截图显示页面可通过公网 80 访问；当时未获得网络抓包，不能将该配置认定为唯一根因。
+# 2026-10-30：恢复演练的 Compose 参数兼容错误
+
+AI首次使用docker compose run --tmpfs；实际服务器返回unknown flag，备份归档已生成且后端已恢复运行，恢复检查尚未执行。修复为使用服务配置已有的私有/tmp tmpfs并恢复到/tmp/restore，不挂载或覆盖业务目录。验收必须以修复后真正执行结果为准，不能把归档成功当作恢复成功。
+
+# 2026-10-30：SQLite检查连接未关闭
+
+备份恢复测试在Windows临时目录清理时出现WinError32。原因是sqlite3连接的with只管理事务，不关闭连接。改用contextlib.closing，完整11项测试通过。若忽略，会留下数据库句柄并影响文件操作。
+
