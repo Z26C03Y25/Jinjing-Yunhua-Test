@@ -1,0 +1,18 @@
+{
+  "tested_at": "2026-10-30T12:34:30.749Z",
+  "sid": 1900363663,
+  "task": "d0b98b5c292d47d29fa70710feb62ad9",
+  "passed": true,
+  "checks": [
+    "invalid_engine_rejected",
+    "browser_create",
+    "duplicate_sid_rejected",
+    "browser_edit",
+    "stale_archive_rejected",
+    "new_rule_detects_pcap",
+    "browser_archive",
+    "historical_rule_snapshot_preserved",
+    "browser_restore",
+    "lifecycle_audit"
+  ]
+}
