@@ -87,12 +87,17 @@ function renderRuleTable(){
 function renderRuleCreate(root){
   const box=document.createElement('details');box.className='rule-editor rule-create';
   const title=document.createElement('summary');title.textContent='新增检测规则';
-  const hint=document.createElement('p');hint.textContent='填写完整单行 alert 规则，SID 为1000000至2147483647之间的未使用整数。真实引擎校验通过后发布；规则不熟悉时请先使用测试样本。';
+  const hint=document.createElement('p');hint.textContent='规则编号已自动推荐，可自行修改。原文没有 SID 时会自动补入；粘贴已有规则会识别其 SID。发布前由引擎校验。';
   const input=document.createElement('textarea');input.setAttribute('aria-label','新增规则原文');input.placeholder='alert http any any -> any any (msg:"Custom suspicious URI"; flow:established,to_server; http.uri; content:"example-marker"; sid:1000100; rev:1;)';input.maxLength=8192;input.disabled=readonly;
+  const sidField=document.createElement('input');sidField.type='number';sidField.min='1000000';sidField.max='2147483647';sidField.step='1';sidField.setAttribute('aria-label','规则编号 SID');sidField.disabled=readonly;
+  let suggested=1000001;const occupied=new Set(ruleRows.map(r=>r.sid));while(occupied.has(suggested))suggested++;sidField.value=String(suggested);
+  const sidLabel=document.createElement('label');sidLabel.className='sid-field';sidLabel.append(document.createTextNode('规则编号（SID）'),sidField);
+  input.oninput=()=>{const matches=[...input.value.matchAll(/\bsid\s*:\s*(\d+)\s*;/g)];if(matches.length===1)sidField.value=matches[0][1]};
+  sidField.oninput=()=>{const matches=[...input.value.matchAll(/\bsid\s*:\s*(\d+)\s*;/g)];if(matches.length===1&&sidField.value)input.value=input.value.replace(/\bsid\s*:\s*\d+\s*;/,'sid:'+sidField.value+';')};
   const save=document.createElement('button');save.textContent='校验并新增规则';save.disabled=readonly;
   const feedback=document.createElement('pre');feedback.className='rule-feedback';
-  save.onclick=async()=>{save.disabled=true;feedback.textContent='正在校验整套规则…';try{const matches=[...input.value.matchAll(/\bsid\s*:\s*(\d+)\s*;/g)];if(matches.length!==1)throw Error('请填写唯一 SID');const sid=Number(matches[0][1]);await api('/rules/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid,raw:input.value})});box.closest('dialog')?.close();await dashboard();status('规则 '+sid+' 已新增，通过真实引擎校验，新任务将采用此规则')}catch(e){feedback.textContent=e.message;save.disabled=readonly}};
-  box.append(title,hint,input,save,feedback);root.append(box);
+  save.onclick=async()=>{save.disabled=true;feedback.textContent='正在校验整套规则…';try{const sid=Number(sidField.value);if(!Number.isInteger(sid)||sid<1000000||sid>2147483647)throw Error('规则编号应为1000000至2147483647的整数');if(occupied.has(sid))throw Error('编号 '+sid+' 已被使用（包含已归档规则），请修改规则编号');const matches=[...input.value.matchAll(/\bsid\s*:\s*(\d+)\s*;/g)];if(matches.length>1)throw Error('原文包含多个 SID，请只保留一个');if(!input.value.trim().endsWith(')'))throw Error('请填写完整的单行 alert 规则，结尾应为右括号');input.value=matches.length?input.value.replace(/\bsid\s*:\s*\d+\s*;/,'sid:'+sid+';'):input.value.trim().replace(/\)$/, ' sid:'+sid+';)');await api('/rules/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid,raw:input.value})});box.closest('dialog')?.close();await dashboard();status('规则 '+sid+' 已新增，通过真实引擎校验，新任务将采用此规则')}catch(e){feedback.textContent=e.message;save.disabled=readonly}};
+  box.append(title,hint,sidLabel,input,save,feedback);root.append(box);
 }
 el('filter').onclick=()=>{page=1;alerts(selectedTask).catch(e=>status(e.message))};el('prev').onclick=()=>{if(page>1){page--;alerts(selectedTask).catch(e=>status(e.message))}};el('next').onclick=()=>{if(page*25<total){page++;alerts(selectedTask).catch(e=>status(e.message))}};
 

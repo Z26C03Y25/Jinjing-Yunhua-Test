@@ -21,7 +21,8 @@ const raw = `alert http any any -> any any (msg:"CRUD acceptance fixture"; flow:
     await page.getByRole('button',{name:'校验并新增规则',exact:true}).click();
     await page.locator('.rule-feedback').filter({hasText:'Suricata 校验失败'}).waitFor();
     if((await get('/rules')).some(r=>r.sid===sid))throw Error('invalid rule was stored');
-    await page.getByRole('textbox',{name:'新增规则原文',exact:true}).fill(raw);
+    await page.getByRole('textbox',{name:'新增规则原文',exact:true}).fill(raw.replace(/sid:\d+;/,''));
+    await page.getByRole('spinbutton',{name:'规则编号 SID',exact:true}).fill(String(sid));
     await page.getByRole('button',{name:'校验并新增规则',exact:true}).click();
     await page.locator('tr[data-sid="'+sid+'"]').waitFor();
     await post('/rules/create',{sid,raw},409);
@@ -53,7 +54,7 @@ const raw = `alert http any any -> any any (msg:"CRUD acceptance fixture"; flow:
     if(!(await get('/rules')).some(r=>r.sid===sid&&!r.archived))throw Error('restore failed');
     const history=await get('/rules/'+sid+'/history');
     if(!['restore','archive','edit','create'].every(a=>history.some(r=>r.action===a)))throw Error('audit missing');
-    const result={tested_at:new Date().toISOString(),sid,task,passed:true,checks:['invalid_engine_rejected','browser_create','duplicate_sid_rejected','browser_edit','stale_archive_rejected','new_rule_detects_pcap','browser_archive','historical_rule_snapshot_preserved','browser_restore','lifecycle_audit']};
+    const result={tested_at:new Date().toISOString(),sid,task,passed:true,checks:['invalid_engine_rejected','browser_create','dedicated_sid_input','missing_sid_automatically_inserted','duplicate_sid_rejected','browser_edit','stale_archive_rejected','new_rule_detects_pcap','browser_archive','historical_rule_snapshot_preserved','browser_restore','lifecycle_audit']};
     fs.writeFileSync('validation/rule-crud-smoke.json',JSON.stringify(result,null,2));console.log(JSON.stringify(result));
   }finally{
     try{const current=(await get('/rules?include_archived=1')).find(r=>r.sid===sid);if(current&&!current.archived)await post('/rules/'+sid+'/archive',{base_revision:current.revision})}finally{await browser.close()}
