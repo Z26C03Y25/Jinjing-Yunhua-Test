@@ -63,6 +63,9 @@ class HTTPSecurityTest(unittest.TestCase):
         self.assertTrue(self.request('/api/me', actor='viewer')[1]['readonly'])
         self.assertEqual(self.request('/api/tasks', b'x'*24, actor='viewer')[0], 403)
         self.assertEqual(self.request('/api/tasks', b'x'*24, origin='http://evil.invalid')[0], 403)
+        self.assertEqual(self.request('/api/rules/1000001', {}, actor='viewer')[0], 403)
+        self.assertEqual(self.request('/api/rules/1000001/rollback', {}, actor='viewer')[0], 403)
+        self.assertEqual(self.request('/api/rules/1000001', b'[]')[0], 422)
 
     def test_invalid_capture_traversal_and_rule_injection(self):
         self.assertEqual(self.request('/api/tasks', b'x'*24)[0], 400)

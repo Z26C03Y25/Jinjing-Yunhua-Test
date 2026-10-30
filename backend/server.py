@@ -173,6 +173,8 @@ class API(BaseHTTPRequestHandler):
                     raise ValueError('规则请求大小无效')
                 self.connection.settimeout(10)
                 body = json.loads(self.rfile.read(size))
+                if not isinstance(body, dict):
+                    raise ValueError('请求必须是 JSON 对象')
                 sid = int(self.path.split('/')[3])
                 with RULE_LOCK:
                     candidates = rule_list()
@@ -207,6 +209,8 @@ class API(BaseHTTPRequestHandler):
                     raise ValueError('invalid_body')
                 self.connection.settimeout(10)
                 body = json.loads(self.rfile.read(size))
+                if not isinstance(body, dict):
+                    raise ValueError('请求必须是 JSON 对象')
                 with database() as db:
                     if self.path == '/api/rules':
                         sid = int(body['sid'])

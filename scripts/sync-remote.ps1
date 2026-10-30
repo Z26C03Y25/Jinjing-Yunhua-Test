@@ -4,6 +4,7 @@ param(
     [string]$Server,
     [string]$User = 'root',
     [int]$Port = 22,
+    [ValidateSet(22,443)][int]$GitHubSshPort = 22,
     [string]$RemoteDirectory = 'code/Jinjing-Yunhua-Test',
     [string]$Message = 'chore: sync local changes to Ubuntu',
     [switch]$Deploy,
@@ -16,6 +17,10 @@ if (-not (Test-Path -LiteralPath $windowsSsh)) { throw '未找到 Windows OpenSS
 $keyPath = Join-Path $env:USERPROFILE '.ssh\id_ed25519'
 $knownHostsPath = Join-Path $env:USERPROFILE '.ssh\known_hosts'
 $gitSshCommand = '"' + $windowsSsh.Replace('\', '/') + '" -o ConnectTimeout=20 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 -o IdentitiesOnly=yes -i "' + $keyPath.Replace('\', '/') + '" -o UserKnownHostsFile="' + $knownHostsPath.Replace('\', '/') + '"'
+
+if ($GitHubSshPort -eq 443) {
+    $gitSshCommand += ' -o Hostname=ssh.github.com -o HostKeyAlias=github.com -p 443'
+}
 
 function Invoke-Git {
     param([string[]]$Arguments)
