@@ -92,7 +92,7 @@ class API(BaseHTTPRequestHandler):
     def send_json(self, code, value):
         data = json.dumps(value, ensure_ascii=False).encode()
         self.send_response(code)
-        if code == 401:
+        if code == 401 and self.headers.get('X-Requested-With') != 'XMLHttpRequest':
             self.send_header('WWW-Authenticate', 'Basic realm="IDS"')
         self.send_header('Content-Type', 'application/json; charset=utf-8')
         self.send_header('Content-Length', str(len(data)))
