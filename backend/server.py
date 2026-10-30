@@ -16,7 +16,7 @@ import threading
 import uuid
 from contextlib import contextmanager
 from security import FailureLimiter
-from rule_editor import publish
+from rule_editor import publish, lifecycle, validate_rule
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit, parse_qs
 from collector import connect, import_eve
@@ -32,11 +32,21 @@ RULES = pathlib.Path(os.environ.get('RULES_PATH', '/app/rules/local.rules'))
 RULE_LOCK = threading.Lock()
 AUTH_FAILURES = FailureLimiter()
 
-def rule_list():
+def rule_list(include_archived=False):
     with database() as db:
         states = dict(db.execute('SELECT sid,enabled FROM rule_state'))
         overrides = {r['sid']: (r['raw'], r['revision']) for r in db.execute('SELECT * FROM rule_overrides')}
-    return [{'sid': int(re.search(r'sid:(\d+);', line)[1]), 'raw': overrides.get(int(re.search(r'sid:(\d+);', line)[1]), (line, 0))[0], 'revision': overrides.get(int(re.search(r'sid:(\d+);', line)[1]), (line, 0))[1], 'enabled': bool(states.get(int(re.search(r'sid:(\d+);', line)[1]), 1))} for line in RULES.read_text().splitlines() if line.startswith('alert ')]
+        catalog = {r['sid']: dict(r) for r in db.execute('SELECT * FROM rule_catalog')}
+    baselines = {int(re.search(r'\bsid\s*:\s*(\d+)\s*;', line)[1]): line
+                 for line in RULES.read_text().splitlines() if line.startswith('alert ')}
+    for sid, row in catalog.items():
+        baselines.setdefault(sid, row['baseline'])
+    return [{'sid': sid, 'raw': overrides.get(sid, (raw, 0))[0],
+             'revision': overrides.get(sid, (raw, 0))[1], 'baseline': raw,
+             'archived': bool(catalog.get(sid, {}).get('archived', 0)),
+             'enabled': bool(states.get(sid, 1)) and not catalog.get(sid, {}).get('archived', 0)}
+            for sid, raw in sorted(baselines.items())
+            if include_archived or not catalog.get(sid, {}).get('archived', 0)]
 
 
 @contextmanager
@@ -137,14 +147,17 @@ class API(BaseHTTPRequestHandler):
                 return self.send_json(200, overview(db))
             if re.fullmatch(r'/api/rules/\d+/history', url.path):
                 sid = int(url.path.split('/')[3])
-                baseline = next((line for line in RULES.read_text().splitlines() if re.search(r'\bsid:'+str(sid)+r';', line)), None)
+                baseline = next((r['baseline'] for r in rule_list(True) if r['sid'] == sid), None)
                 if baseline is None:
                     return self.send_json(404, {'error': 'not_found'})
                 rows = [dict(r) for r in db.execute('SELECT sid,revision,raw,actor,created_at FROM rule_revisions WHERE sid=? ORDER BY revision DESC', (sid,))]
                 rows.append({'sid': sid, 'revision': 0, 'raw': baseline, 'actor': 'repository', 'created_at': None})
+                for row in rows:
+                    action = db.execute('SELECT action FROM rule_actions WHERE sid=? AND revision=?', (sid, row['revision'])).fetchone()
+                    row['action'] = action[0] if action else 'edit' if row['revision'] else 'baseline'
                 return self.send_json(200, rows)
             if url.path == '/api/rules':
-                return self.send_json(200, rule_list())
+                return self.send_json(200, rule_list(parse_qs(url.query).get('include_archived') == ['1']))
             if url.path == '/api/alerts':
                 try:
                     return self.send_json(200, alerts(db, parse_qs(url.query)))
@@ -155,7 +168,7 @@ class API(BaseHTTPRequestHandler):
                 if result:
                     snapshot = STATE / result['task_id'] / 'active.rules'
                     source = snapshot if snapshot.exists() else RULES
-                    result['rule'] = next((line for line in source.read_text().splitlines() if 'sid:'+str(result['sid'])+';' in line), '历史规则快照不可用')
+                    result['rule'] = next((line for line in source.read_text().splitlines() if re.search(r'\bsid\s*:\s*'+str(result['sid'])+r'\s*;', line)), '历史规则快照不可用')
                 return self.send_json(200 if result else 404, result or {'error': 'not_found'})
         return self.send_json(404, {'error': 'not_found'})
 
@@ -167,7 +180,7 @@ class API(BaseHTTPRequestHandler):
             return self.send_json(429 if self.auth_limited else 401, {'error': '登录失败过多，请一分钟后重试' if self.auth_limited else 'unauthorized'})
         if self.actor != 'analyst':
             return self.send_json(403, {'error': '只读角色不能执行修改操作'})
-        if re.fullmatch(r'/api/rules/\d+(/rollback)?', self.path):
+        if self.path == '/api/rules/create' or re.fullmatch(r'/api/rules/\d+(/rollback|/archive|/restore)?', self.path):
             try:
                 size = int(self.headers.get('Content-Length', '0'))
                 if not 0 < size <= 32768 or self.headers.get('Transfer-Encoding'):
@@ -176,9 +189,25 @@ class API(BaseHTTPRequestHandler):
                 body = json.loads(self.rfile.read(size))
                 if not isinstance(body, dict):
                     raise ValueError('请求必须是 JSON 对象')
-                sid = int(self.path.split('/')[3])
+                sid = body.get('sid') if self.path == '/api/rules/create' else int(self.path.split('/')[3])
                 with RULE_LOCK:
-                    candidates = rule_list()
+                    all_rules = rule_list(True)
+                    candidates = [r for r in all_rules if not r['archived']]
+                    now = dt.datetime.now(dt.timezone.utc).isoformat()
+                    if self.path == '/api/rules/create':
+                        raw = validate_rule(body.get('raw'), sid)
+                        if sid in [r['sid'] for r in all_rules]:
+                            raise RuntimeError('SID 已存在（含已归档规则），请改用其他编号或恢复原规则')
+                        with database() as db:
+                            revision = publish(db, sid, raw, 0, self.actor, candidates + [{'sid': sid, 'raw': raw}], STATE, now)
+                            db.execute('INSERT INTO rule_catalog(sid,baseline) VALUES (?,?)', (sid, raw))
+                            db.execute('INSERT INTO rule_actions(sid,action,revision,actor,created_at) VALUES (?,?,?,?,?)', (sid, 'create', revision, self.actor, now))
+                        return self.send_json(201, {'ok': True, 'revision': revision})
+                    current = next((r for r in all_rules if r['sid'] == sid), None)
+                    if current and self.path.endswith(('/archive', '/restore')):
+                        with database() as db:
+                            revision = lifecycle(db, current, self.path.rsplit('/', 1)[1], body.get('base_revision'), self.actor, STATE, all_rules, now)
+                        return self.send_json(200, {'ok': True, 'revision': revision})
                     if sid not in [r['sid'] for r in candidates]:
                         return self.send_json(404, {'error': '规则不存在'})
                     with database() as db:
@@ -188,13 +217,14 @@ class API(BaseHTTPRequestHandler):
                             if type(target) is not int:
                                 raise ValueError('回滚版本必须是整数')
                             if target == 0:
-                                raw = next(line for line in RULES.read_text().splitlines() if re.search(r'\bsid:'+str(sid)+r';', line))
+                                raw = current['baseline']
                             else:
                                 row = db.execute('SELECT raw FROM rule_revisions WHERE sid=? AND revision=?', (sid, target)).fetchone()
                                 if not row:
                                     raise ValueError('历史版本不存在')
                                 raw = row[0]
                         revision = publish(db, sid, raw, body.get('base_revision'), self.actor, candidates, STATE, dt.datetime.now(dt.timezone.utc).isoformat())
+                        db.execute('INSERT INTO rule_actions(sid,action,revision,actor,created_at) VALUES (?,?,?,?,?)', (sid, 'rollback' if self.path.endswith('/rollback') else 'edit', revision, self.actor, now))
                 return self.send_json(200, {'ok': True, 'revision': revision, 'note': '已通过真实引擎校验，对后续任务生效'})
             except RuntimeError as exc:
                 return self.send_json(409, {'error': str(exc)})

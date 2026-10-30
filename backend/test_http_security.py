@@ -68,6 +68,30 @@ class HTTPSecurityTest(unittest.TestCase):
         self.assertEqual(self.request('/api/rules/1000001', {}, actor='viewer')[0], 403)
         self.assertEqual(self.request('/api/rules/1000001/rollback', {}, actor='viewer')[0], 403)
         self.assertEqual(self.request('/api/rules/1000001', b'[]')[0], 422)
+        for endpoint in ('/api/rules/create', '/api/rules/1000001/archive', '/api/rules/1000001/restore'):
+            self.assertEqual(self.request(endpoint, {}, actor='viewer')[0], 403)
+
+    def test_rule_crud_versions_and_archive(self):
+        from unittest.mock import patch
+        import rule_editor
+        raw = 'alert tcp any any -> any any (msg:"CRUD test"; sid:1900001; rev:1;)'
+        def checked_publish(*args):
+            return rule_editor.publish(*args, checker=lambda *a: None)
+        def checked_lifecycle(*args):
+            return rule_editor.lifecycle(*args, checker=lambda *a: None)
+        with patch.object(self.module, 'publish', side_effect=checked_publish), patch.object(self.module, 'lifecycle', side_effect=checked_lifecycle):
+            self.assertEqual(self.request('/api/rules/create', {'sid':1900001,'raw':raw})[0], 201)
+            self.assertEqual(self.request('/api/rules/create', {'sid':1900001,'raw':raw})[0], 409)
+            self.assertEqual(self.request('/api/rules/1900001', {'raw':raw,'base_revision':1})[1]['revision'], 2)
+            self.assertEqual(self.request('/api/rules/1900001/archive', {'base_revision':1})[0], 409)
+            self.assertEqual(self.request('/api/rules/1900001/archive', {'base_revision':2})[1]['revision'], 3)
+            self.assertNotIn(1900001, [r['sid'] for r in self.request('/api/rules')[1]])
+            self.assertTrue(next(r for r in self.request('/api/rules?include_archived=1')[1] if r['sid']==1900001)['archived'])
+            self.assertEqual(self.request('/api/rules/create', {'sid':1900001,'raw':raw})[0], 409)
+            self.assertEqual(self.request('/api/rules/1900001', {'raw':raw,'base_revision':3})[0], 404)
+            self.assertEqual(self.request('/api/rules/1900001/restore', {'base_revision':3})[1]['revision'], 4)
+            history = self.request('/api/rules/1900001/history')[1]
+            self.assertEqual([r['action'] for r in history], ['restore','archive','edit','create','baseline'])
 
     def test_invalid_capture_traversal_and_rule_injection(self):
         self.assertEqual(self.request('/api/tasks', b'x'*24)[0], 400)

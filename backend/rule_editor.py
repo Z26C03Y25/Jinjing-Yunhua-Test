@@ -6,6 +6,8 @@ import tempfile
 
 
 def validate_rule(raw, sid):
+    if type(sid) is not int or not 1000000 <= sid <= 2147483647:
+        raise ValueError('自定义 SID 必须为 1000000 至 2147483647 的整数')
     if not isinstance(raw, str) or not raw.strip() or len(raw.encode('utf-8')) > 8192:
         raise ValueError('规则不能为空，最大 8 KB')
     raw = raw.strip()
@@ -41,4 +43,21 @@ def publish(db, sid, raw, base_revision, actor, candidates, state, now, checker=
     revision += 1
     db.execute('INSERT OR REPLACE INTO rule_overrides VALUES (?,?,?)', (sid, raw, revision))
     db.execute('INSERT INTO rule_revisions(sid,revision,raw,actor,created_at) VALUES (?,?,?,?,?)', (sid, revision, raw, actor, now))
+    return revision
+
+
+def lifecycle(db, rule, action, base_revision, actor, state, candidates, now, checker=check_rules):
+    if type(base_revision) is not int or base_revision != rule['revision']:
+        raise RuntimeError('规则已更新，请刷新后操作')
+    archived = action == 'archive'
+    if bool(rule['archived']) == archived:
+        raise RuntimeError('规则状态已变化，请刷新后操作')
+    if not archived:
+        checker([r['raw'] for r in candidates if not r['archived']] + [rule['raw']], state)
+    revision = rule['revision'] + 1
+    db.execute('INSERT OR IGNORE INTO rule_catalog(sid,baseline) VALUES (?,?)', (rule['sid'], rule['raw']))
+    db.execute('UPDATE rule_catalog SET archived=? WHERE sid=?', (int(archived), rule['sid']))
+    db.execute('INSERT OR REPLACE INTO rule_overrides VALUES (?,?,?)', (rule['sid'], rule['raw'], revision))
+    db.execute('INSERT INTO rule_revisions(sid,revision,raw,actor,created_at) VALUES (?,?,?,?,?)', (rule['sid'], revision, rule['raw'], actor, now))
+    db.execute('INSERT INTO rule_actions(sid,action,revision,actor,created_at) VALUES (?,?,?,?,?)', (rule['sid'], action, revision, actor, now))
     return revision
