@@ -1,0 +1,12 @@
+{
+  "tested_at": "2026-10-30T12:10:23.325905+00:00",
+  "url": "http://123.57.158.71",
+  "checks": [
+    "real_engine_rejects_invalid_rule_without_change",
+    "real_engine_accepts_valid_rule",
+    "stale_revision_rejected",
+    "published_content_in_audit_history",
+    "rollback_restores_original_content_as_new_revision"
+  ],
+  "passed": true
+}
