@@ -24,11 +24,11 @@
       "raw_alerts": 2353,
       "aggregate_groups": 1156,
       "reduction_rate": 0.5087122821929452,
-      "client_completion_ms_mean": 1116.37,
-      "client_completion_ms_max": 1587.11
+      "client_completion_ms_mean": 1151.9,
+      "client_completion_ms_max": 1598.34
     },
     "metric_definition": "原始告警精确率单列；finding 精确率/召回率/F1 使用期望命中项与同 SID 五元组十秒窗的误报组计数。完成耗时为客户端提交到收齐结果，含排队、网络和轮询，不是首攻击包到入库时延。",
-    "generated_at": "2026-10-29T03:10:48.259558+00:00",
+    "generated_at": "2026-10-30T12:22:48.838867+00:00",
     "results": [
       {
         "scenario": "benign_http",
@@ -42,8 +42,8 @@
         "fp_findings": 0,
         "f1_finding_level": null,
         "false_positives": [],
-        "task_id": "da66624e351b452982cfdf16239fcb19",
-        "client_observed_completion_ms": 1042.43,
+        "task_id": "336ab036d3b942d9b36b98c013b17230",
+        "client_observed_completion_ms": 1029.64,
         "aggregation": {
           "raw_count": 0,
           "group_count": 0,
@@ -63,8 +63,8 @@
         "fp_findings": 0,
         "f1_finding_level": null,
         "false_positives": [],
-        "task_id": "26f5cbb2d2f145e982a9f20c9b3b4f53",
-        "client_observed_completion_ms": 1028.36,
+        "task_id": "157aaae7e7f44c45bb8107a3185c61a5",
+        "client_observed_completion_ms": 1030.29,
         "aggregation": {
           "raw_count": 0,
           "group_count": 0,
@@ -84,8 +84,8 @@
         "fp_findings": 0,
         "f1_finding_level": 1.0,
         "false_positives": [],
-        "task_id": "a9dcb139df3a4219ba7b1a986907e90d",
-        "client_observed_completion_ms": 1027.63,
+        "task_id": "3655cff3f06242f088101eee29d76857",
+        "client_observed_completion_ms": 1033.92,
         "aggregation": {
           "raw_count": 10,
           "group_count": 10,
@@ -93,8 +93,8 @@
           "window_seconds": 10
         },
         "historical_packet_to_ingestion_seconds": {
-          "mean": 25981840.5252212,
-          "max": 25981840.525583,
+          "mean": 26101360.753017504,
+          "max": 26101360.753428,
           "interpretation": "历史样本墙钟差，包含样本年代，不可用来评价引擎处理速度"
         }
       },
@@ -110,8 +110,8 @@
         "fp_findings": 0,
         "f1_finding_level": 1.0,
         "false_positives": [],
-        "task_id": "58e8fa8974684cafa34aa85b02c710d3",
-        "client_observed_completion_ms": 1587.11,
+        "task_id": "370418147de04462affa84d913a6a5ef",
+        "client_observed_completion_ms": 1598.34,
         "aggregation": {
           "raw_count": 1200,
           "group_count": 3,
@@ -119,8 +119,8 @@
           "window_seconds": 10
         },
         "historical_packet_to_ingestion_seconds": {
-          "mean": 25981841.601061106,
-          "max": 25981841.644258,
+          "mean": 26101361.87706163,
+          "max": 26101361.919946,
           "interpretation": "历史样本墙钟差，包含样本年代，不可用来评价引擎处理速度"
         }
       },
@@ -136,8 +136,8 @@
         "fp_findings": 0,
         "f1_finding_level": 0,
         "false_positives": [],
-        "task_id": "a37913da534a4890aa917f888e4e0489",
-        "client_observed_completion_ms": 1031.85,
+        "task_id": "11d274249cdd47f4842b3f42574e069e",
+        "client_observed_completion_ms": 1037.07,
         "aggregation": {
           "raw_count": 0,
           "group_count": 0,
@@ -157,8 +157,8 @@
         "fp_findings": 0,
         "f1_finding_level": 1.0,
         "false_positives": [],
-        "task_id": "b1fc20e4f1cb43ddb425bb81bf2e6efc",
-        "client_observed_completion_ms": 1242.36,
+        "task_id": "10c729404759481fb0b87e2481998029",
+        "client_observed_completion_ms": 1530.56,
         "aggregation": {
           "raw_count": 1140,
           "group_count": 1140,
@@ -166,8 +166,8 @@
           "window_seconds": 10
         },
         "historical_packet_to_ingestion_seconds": {
-          "mean": 25981844.293012246,
-          "max": 25981844.310631,
+          "mean": 26101364.542192716,
+          "max": 26101364.560579,
           "interpretation": "历史样本墙钟差，包含样本年代，不可用来评价引擎处理速度"
         }
       },
@@ -183,8 +183,8 @@
         "fp_findings": 0,
         "f1_finding_level": 1.0,
         "false_positives": [],
-        "task_id": "5b6ff4bd6f9249e68ece5385e97176cc",
-        "client_observed_completion_ms": 1030.49,
+        "task_id": "682fa71ce39e457597f280ad6cdcc507",
+        "client_observed_completion_ms": 1042.32,
         "aggregation": {
           "raw_count": 1,
           "group_count": 1,
@@ -192,8 +192,8 @@
           "window_seconds": 10
         },
         "historical_packet_to_ingestion_seconds": {
-          "mean": 25981845.554384,
-          "max": 25981845.554384,
+          "mean": 26101366.125774,
+          "max": 26101366.125774,
           "interpretation": "历史样本墙钟差，包含样本年代，不可用来评价引擎处理速度"
         }
       },
@@ -209,8 +209,8 @@
         "fp_findings": 0,
         "f1_finding_level": 1.0,
         "false_positives": [],
-        "task_id": "4aa8f379c565488da101179dcc36b43e",
-        "client_observed_completion_ms": 1028.18,
+        "task_id": "6c84ea6c7f114c9da12aec0704497bbc",
+        "client_observed_completion_ms": 1034.58,
         "aggregation": {
           "raw_count": 1,
           "group_count": 1,
@@ -218,8 +218,8 @@
           "window_seconds": 10
         },
         "historical_packet_to_ingestion_seconds": {
-          "mean": 25981846.588349,
-          "max": 25981846.588349,
+          "mean": 26101367.165223,
+          "max": 26101367.165223,
           "interpretation": "历史样本墙钟差，包含样本年代，不可用来评价引擎处理速度"
         }
       },
@@ -235,8 +235,8 @@
         "fp_findings": 0,
         "f1_finding_level": 1.0,
         "false_positives": [],
-        "task_id": "ec3f680dd04946d28c43a06c5be578a5",
-        "client_observed_completion_ms": 1028.95,
+        "task_id": "396479abed9f4819a9607ad9698179f3",
+        "client_observed_completion_ms": 1030.37,
         "aggregation": {
           "raw_count": 1,
           "group_count": 1,
@@ -244,8 +244,8 @@
           "window_seconds": 10
         },
         "historical_packet_to_ingestion_seconds": {
-          "mean": 25981847.622316,
-          "max": 25981847.622316,
+          "mean": 26101368.307564,
+          "max": 26101368.307564,
           "interpretation": "历史样本墙钟差，包含样本年代，不可用来评价引擎处理速度"
         }
       }

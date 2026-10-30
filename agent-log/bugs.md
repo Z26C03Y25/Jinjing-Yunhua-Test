@@ -45,3 +45,7 @@ AI首次使用docker compose run --tmpfs；实际服务器返回unknown flag，�
 
 备份恢复测试在Windows临时目录清理时出现WinError32。原因是sqlite3连接的with只管理事务，不关闭连接。改用contextlib.closing，完整11项测试通过。若忽略，会留下数据库句柄并影响文件操作。
 
+# 2026-10-30：备份命令读走远程脚本输入
+
+首次修复tmpfs参数后恢复成功，但命令正常结束却没有后续独立验收输出。排查发现远程脚本通过管道送给bash，docker compose run默认附带stdin，可能读走后续命令。两处维护容器调用均显式从/dev/null读取，再重跑串联路径验证。只检查退出码无法发现这种漏执行。
+
