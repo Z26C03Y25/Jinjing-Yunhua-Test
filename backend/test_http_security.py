@@ -93,6 +93,20 @@ class HTTPSecurityTest(unittest.TestCase):
             history = self.request('/api/rules/1900001/history')[1]
             self.assertEqual([r['action'] for r in history], ['restore','archive','edit','create','baseline'])
 
+    def test_rule_auto_identifier_is_allocated_by_server(self):
+        import rule_editor
+        def checked_publish(*args):
+            return rule_editor.publish(*args, checker=lambda *a: None)
+        with patch.object(self.module, 'publish', side_effect=checked_publish):
+            body = {'name':'自动编号验收', 'raw':'alert tcp any any -> any any (rev:1;)'}
+            first = self.request('/api/rules/create', body)
+            second = self.request('/api/rules/create', body)
+            self.assertEqual(first[0], 201)
+            self.assertEqual(second[0], 201)
+            self.assertNotEqual(first[1]['sid'], second[1]['sid'])
+            rule = next(r for r in self.request('/api/rules')[1] if r['sid']==first[1]['sid'])
+            self.assertIn('msg:"自动编号验收";', rule['raw'])
+
     def test_invalid_capture_traversal_and_rule_injection(self):
         self.assertEqual(self.request('/api/tasks', b'x'*24)[0], 400)
         self.assertEqual(self.request('/api/../../etc/passwd')[0], 404)

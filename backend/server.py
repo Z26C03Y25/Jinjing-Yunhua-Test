@@ -16,7 +16,7 @@ import threading
 import uuid
 from contextlib import contextmanager
 from security import FailureLimiter
-from rule_editor import publish, lifecycle, validate_rule
+from rule_editor import publish, lifecycle, validate_rule, prepare_new_rule
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit, parse_qs
 from collector import connect, import_eve
@@ -195,14 +195,17 @@ class API(BaseHTTPRequestHandler):
                     candidates = [r for r in all_rules if not r['archived']]
                     now = dt.datetime.now(dt.timezone.utc).isoformat()
                     if self.path == '/api/rules/create':
-                        raw = validate_rule(body.get('raw'), sid)
+                        if sid is None:
+                            sid, raw = prepare_new_rule(body.get('raw'), body.get('name'), all_rules)
+                        else:
+                            raw = validate_rule(body.get('raw'), sid)
                         if sid in [r['sid'] for r in all_rules]:
                             raise RuntimeError('SID 已存在（含已归档规则），请改用其他编号或恢复原规则')
                         with database() as db:
                             revision = publish(db, sid, raw, 0, self.actor, candidates + [{'sid': sid, 'raw': raw}], STATE, now)
                             db.execute('INSERT INTO rule_catalog(sid,baseline) VALUES (?,?)', (sid, raw))
                             db.execute('INSERT INTO rule_actions(sid,action,revision,actor,created_at) VALUES (?,?,?,?,?)', (sid, 'create', revision, self.actor, now))
-                        return self.send_json(201, {'ok': True, 'revision': revision})
+                        return self.send_json(201, {'ok': True, 'revision': revision, 'sid': sid})
                     current = next((r for r in all_rules if r['sid'] == sid), None)
                     if current and self.path.endswith(('/archive', '/restore')):
                         with database() as db:

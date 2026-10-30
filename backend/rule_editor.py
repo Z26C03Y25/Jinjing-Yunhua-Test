@@ -33,6 +33,26 @@ def check_rules(lines, state, runner=subprocess.run):
             raise ValueError('Suricata 校验失败，旧规则未修改：\n' + log.read_text(encoding='utf-8', errors='replace')[-6000:])
 
 
+def prepare_new_rule(raw, name, candidates):
+    if not isinstance(name, str) or not name.strip() or len(name.strip()) > 120 or any(ord(c) < 32 for c in name):
+        raise ValueError('请填写1至120字的规则名称，不支持换行')
+    if not isinstance(raw, str) or not raw.strip().endswith(')') or '\n' in raw or '\r' in raw:
+        raise ValueError('请填写完整的单行 alert 检测规则')
+    if len(re.findall(r'\bsid\s*:', raw)) > 1:
+        raise ValueError('规则原文不能包含多个 SID')
+    occupied = {r['sid'] for r in candidates}
+    sid = 1000001
+    while sid in occupied:
+        sid += 1
+    raw = re.sub(r'\bsid\s*:\s*\d+\s*;', '', raw).strip()
+    escaped = name.strip().replace('\\', '\\\\').replace('"', '\\"').replace(';', '\\;')
+    message = 'msg:"' + escaped + '";'
+    pattern = r'\bmsg\s*:\s*"(?:\\.|[^"\\])*"\s*;'
+    raw = re.sub(pattern, lambda _: message, raw, count=1) if re.search(pattern, raw) else raw[:-1] + ' ' + message + ')'
+    raw = raw[:-1] + ' sid:' + str(sid) + ';)'
+    return sid, validate_rule(raw, sid)
+
+
 def publish(db, sid, raw, base_revision, actor, candidates, state, now, checker=check_rules):
     raw = validate_rule(raw, sid)
     row = db.execute('SELECT revision FROM rule_overrides WHERE sid=?', (sid,)).fetchone()

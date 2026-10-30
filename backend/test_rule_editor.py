@@ -2,10 +2,18 @@ import tempfile
 import pathlib
 import unittest
 from collector import connect
-from rule_editor import publish, validate_rule
+from rule_editor import publish, validate_rule, prepare_new_rule
 
 
 class RuleEditorTest(unittest.TestCase):
+    def test_system_sid_and_name(self):
+        sid, raw = prepare_new_rule('alert tcp any any -> any any (rev:1;)', '自定义检测', [{'sid':1000001}, {'sid':1000002, 'archived':True}])
+        self.assertEqual(sid, 1000003)
+        self.assertIn('msg:"自定义检测";', raw)
+        self.assertIn('sid:1000003;', raw)
+        with self.assertRaises(ValueError):
+            prepare_new_rule('alert tcp any any -> any any (rev:1;)', '\n', [])
+
     def test_validation_failure_keeps_current_and_revision_conflict(self):
         db = connect(':memory:')
         raw = 'alert tcp any any -> any any (msg:"test"; sid:1000001; rev:1;)'

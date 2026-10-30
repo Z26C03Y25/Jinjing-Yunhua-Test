@@ -87,17 +87,16 @@ function renderRuleTable(){
 function renderRuleCreate(root){
   const box=document.createElement('details');box.className='rule-editor rule-create';
   const title=document.createElement('summary');title.textContent='新增检测规则';
-  const hint=document.createElement('p');hint.textContent='规则编号已自动推荐，可自行修改。原文没有 SID 时会自动补入；粘贴已有规则会识别其 SID。发布前由引擎校验。';
-  const input=document.createElement('textarea');input.setAttribute('aria-label','新增规则原文');input.placeholder='alert http any any -> any any (msg:"Custom suspicious URI"; flow:established,to_server; http.uri; content:"example-marker"; sid:1000100; rev:1;)';input.maxLength=8192;input.disabled=readonly;
-  const sidField=document.createElement('input');sidField.type='number';sidField.min='1000000';sidField.max='2147483647';sidField.step='1';sidField.setAttribute('aria-label','规则编号 SID');sidField.disabled=readonly;
-  let suggested=1000001;const occupied=new Set(ruleRows.map(r=>r.sid));while(occupied.has(suggested))suggested++;sidField.value=String(suggested);
-  const sidLabel=document.createElement('label');sidLabel.className='sid-field';sidLabel.append(document.createTextNode('规则编号（SID）'),sidField);
-  input.oninput=()=>{const matches=[...input.value.matchAll(/\bsid\s*:\s*(\d+)\s*;/g)];if(matches.length===1)sidField.value=matches[0][1]};
-  sidField.oninput=()=>{const matches=[...input.value.matchAll(/\bsid\s*:\s*(\d+)\s*;/g)];if(matches.length===1&&sidField.value)input.value=input.value.replace(/\bsid\s*:\s*\d+\s*;/,'sid:'+sidField.value+';')};
+  const hint=document.createElement('p');hint.textContent='SID 由系统自动分配，无需填写。规则名称用于列表和告警展示，检测条件决定匹配哪些流量。';
+  const name=document.createElement('input');name.type='text';name.maxLength=120;name.setAttribute('aria-label','规则名称');name.placeholder='例如：检测可疑数据库查询';name.disabled=readonly;
+  const label=document.createElement('label');label.className='sid-field rule-name-field';label.append(document.createTextNode('规则名称'),name);
+  const contentLabel=document.createElement('p');contentLabel.textContent='检测条件（Suricata 规则）';
+  const input=document.createElement('textarea');input.setAttribute('aria-label','新增规则原文');input.placeholder='alert http any any -> any any (flow:established,to_server; http.uri; content:"example-marker"; rev:1;)';input.maxLength=8192;input.disabled=readonly;
+  input.oninput=()=>{if(!name.value){const match=input.value.match(/msg:\s*"([^"]*)"/);if(match)name.value=match[1]}};
   const save=document.createElement('button');save.textContent='校验并新增规则';save.disabled=readonly;
   const feedback=document.createElement('pre');feedback.className='rule-feedback';
-  save.onclick=async()=>{save.disabled=true;feedback.textContent='正在校验整套规则…';try{const sid=Number(sidField.value);if(!Number.isInteger(sid)||sid<1000000||sid>2147483647)throw Error('规则编号应为1000000至2147483647的整数');if(occupied.has(sid))throw Error('编号 '+sid+' 已被使用（包含已归档规则），请修改规则编号');const matches=[...input.value.matchAll(/\bsid\s*:\s*(\d+)\s*;/g)];if(matches.length>1)throw Error('原文包含多个 SID，请只保留一个');if(!input.value.trim().endsWith(')'))throw Error('请填写完整的单行 alert 规则，结尾应为右括号');input.value=matches.length?input.value.replace(/\bsid\s*:\s*\d+\s*;/,'sid:'+sid+';'):input.value.trim().replace(/\)$/, ' sid:'+sid+';)');await api('/rules/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid,raw:input.value})});box.closest('dialog')?.close();await dashboard();status('规则 '+sid+' 已新增，通过真实引擎校验，新任务将采用此规则')}catch(e){feedback.textContent=e.message;save.disabled=readonly}};
-  box.append(title,hint,sidLabel,input,save,feedback);root.append(box);
+  save.onclick=async()=>{save.disabled=true;feedback.textContent='正在校验整套规则…';try{if(!name.value.trim())throw Error('请填写规则名称');if(!input.value.trim())throw Error('请填写检测条件');const result=await api('/rules/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name.value.trim(),raw:input.value})});box.closest('dialog')?.close();await dashboard();status('规则“'+name.value.trim()+'”已新增，系统编号 '+result.sid)}catch(e){feedback.textContent=e.message;save.disabled=readonly}};
+  box.append(title,hint,label,contentLabel,input,save,feedback);root.append(box);
 }
 el('filter').onclick=()=>{page=1;alerts(selectedTask).catch(e=>status(e.message))};el('prev').onclick=()=>{if(page>1){page--;alerts(selectedTask).catch(e=>status(e.message))}};el('next').onclick=()=>{if(page*25<total){page++;alerts(selectedTask).catch(e=>status(e.message))}};
 

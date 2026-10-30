@@ -21,3 +21,5 @@
 @media(max-width:700px){.login-screen{display:flex;align-items:center;justify-content:center;padding:40px 28px;background:white}.login-intro{display:none}.login-card{max-width:380px}.login-card h2{font-size:26px}.admin-toolbar{gap:8px}.admin-toolbar>label{width:100%;order:5}.admin-toolbar>button:last-child{margin-left:auto}}
 
 .sid-field{display:flex;align-items:center;gap:16px;font-size:13px;color:#606266;margin:18px 0}.sid-field input{width:190px;font-family:Consolas,monospace}
+
+.rule-name-field{align-items:center}.rule-name-field input{width:calc(100% - 80px);font-family:inherit}
