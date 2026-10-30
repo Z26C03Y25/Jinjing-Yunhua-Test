@@ -1,0 +1,259 @@
+{
+  "checks": {
+    "empty_database": true,
+    "viewer_login": true,
+    "viewer_write_denied": true,
+    "cross_origin_denied": true,
+    "invalid_capture_rejected": true,
+    "nine_scenarios_completed": true,
+    "known_slow_scan_fn": true,
+    "benign_clean": true,
+    "authentication_failure_throttled": true
+  },
+  "all_passed": true,
+  "elapsed_seconds": 25,
+  "scope": "空容器和数据卷、已有基础镜像缓存；不是空操作系统或无缓存镜像环境",
+  "validation": {
+    "summary": {
+      "matched_alerts": 2353,
+      "fp_alerts": 0,
+      "tp_expectations": 6,
+      "fn_expectations": 1,
+      "precision_alert_level": 1.0,
+      "recall_expectation_level": 0.8571428571428571,
+      "raw_alerts": 2353,
+      "aggregate_groups": 1156,
+      "reduction_rate": 0.5087122821929452,
+      "client_completion_ms_mean": 1116.37,
+      "client_completion_ms_max": 1587.11
+    },
+    "metric_definition": "原始告警精确率单列；finding 精确率/召回率/F1 使用期望命中项与同 SID 五元组十秒窗的误报组计数。完成耗时为客户端提交到收齐结果，含排队、网络和轮询，不是首攻击包到入库时延。",
+    "generated_at": "2026-10-29T03:10:48.259558+00:00",
+    "results": [
+      {
+        "scenario": "benign_http",
+        "tp_expectations": 0,
+        "fn_expectations": 0,
+        "matched_alerts": 0,
+        "fp_alerts": 0,
+        "precision_alert_level": null,
+        "recall_expectation_level": null,
+        "precision_finding_level": null,
+        "fp_findings": 0,
+        "f1_finding_level": null,
+        "false_positives": [],
+        "task_id": "da66624e351b452982cfdf16239fcb19",
+        "client_observed_completion_ms": 1042.43,
+        "aggregation": {
+          "raw_count": 0,
+          "group_count": 0,
+          "reduction_rate": 0,
+          "window_seconds": 10
+        }
+      },
+      {
+        "scenario": "benign_mix",
+        "tp_expectations": 0,
+        "fn_expectations": 0,
+        "matched_alerts": 0,
+        "fp_alerts": 0,
+        "precision_alert_level": null,
+        "recall_expectation_level": null,
+        "precision_finding_level": null,
+        "fp_findings": 0,
+        "f1_finding_level": null,
+        "false_positives": [],
+        "task_id": "26f5cbb2d2f145e982a9f20c9b3b4f53",
+        "client_observed_completion_ms": 1028.36,
+        "aggregation": {
+          "raw_count": 0,
+          "group_count": 0,
+          "reduction_rate": 0,
+          "window_seconds": 10
+        }
+      },
+      {
+        "scenario": "brute_http",
+        "tp_expectations": 1,
+        "fn_expectations": 0,
+        "matched_alerts": 10,
+        "fp_alerts": 0,
+        "precision_alert_level": 1.0,
+        "recall_expectation_level": 1.0,
+        "precision_finding_level": 1.0,
+        "fp_findings": 0,
+        "f1_finding_level": 1.0,
+        "false_positives": [],
+        "task_id": "a9dcb139df3a4219ba7b1a986907e90d",
+        "client_observed_completion_ms": 1027.63,
+        "aggregation": {
+          "raw_count": 10,
+          "group_count": 10,
+          "reduction_rate": 0.0,
+          "window_seconds": 10
+        },
+        "historical_packet_to_ingestion_seconds": {
+          "mean": 25981840.5252212,
+          "max": 25981840.525583,
+          "interpretation": "历史样本墙钟差，包含样本年代，不可用来评价引擎处理速度"
+        }
+      },
+      {
+        "scenario": "dns_long",
+        "tp_expectations": 1,
+        "fn_expectations": 0,
+        "matched_alerts": 1200,
+        "fp_alerts": 0,
+        "precision_alert_level": 1.0,
+        "recall_expectation_level": 1.0,
+        "precision_finding_level": 1.0,
+        "fp_findings": 0,
+        "f1_finding_level": 1.0,
+        "false_positives": [],
+        "task_id": "58e8fa8974684cafa34aa85b02c710d3",
+        "client_observed_completion_ms": 1587.11,
+        "aggregation": {
+          "raw_count": 1200,
+          "group_count": 3,
+          "reduction_rate": 0.9975,
+          "window_seconds": 10
+        },
+        "historical_packet_to_ingestion_seconds": {
+          "mean": 25981841.601061106,
+          "max": 25981841.644258,
+          "interpretation": "历史样本墙钟差，包含样本年代，不可用来评价引擎处理速度"
+        }
+      },
+      {
+        "scenario": "scan_slow",
+        "tp_expectations": 0,
+        "fn_expectations": 1,
+        "matched_alerts": 0,
+        "fp_alerts": 0,
+        "precision_alert_level": null,
+        "recall_expectation_level": 0.0,
+        "precision_finding_level": null,
+        "fp_findings": 0,
+        "f1_finding_level": 0,
+        "false_positives": [],
+        "task_id": "a37913da534a4890aa917f888e4e0489",
+        "client_observed_completion_ms": 1031.85,
+        "aggregation": {
+          "raw_count": 0,
+          "group_count": 0,
+          "reduction_rate": 0,
+          "window_seconds": 10
+        }
+      },
+      {
+        "scenario": "scan_syn",
+        "tp_expectations": 1,
+        "fn_expectations": 0,
+        "matched_alerts": 1140,
+        "fp_alerts": 0,
+        "precision_alert_level": 1.0,
+        "recall_expectation_level": 1.0,
+        "precision_finding_level": 1.0,
+        "fp_findings": 0,
+        "f1_finding_level": 1.0,
+        "false_positives": [],
+        "task_id": "b1fc20e4f1cb43ddb425bb81bf2e6efc",
+        "client_observed_completion_ms": 1242.36,
+        "aggregation": {
+          "raw_count": 1140,
+          "group_count": 1140,
+          "reduction_rate": 0.0,
+          "window_seconds": 10
+        },
+        "historical_packet_to_ingestion_seconds": {
+          "mean": 25981844.293012246,
+          "max": 25981844.310631,
+          "interpretation": "历史样本墙钟差，包含样本年代，不可用来评价引擎处理速度"
+        }
+      },
+      {
+        "scenario": "web_sqli",
+        "tp_expectations": 1,
+        "fn_expectations": 0,
+        "matched_alerts": 1,
+        "fp_alerts": 0,
+        "precision_alert_level": 1.0,
+        "recall_expectation_level": 1.0,
+        "precision_finding_level": 1.0,
+        "fp_findings": 0,
+        "f1_finding_level": 1.0,
+        "false_positives": [],
+        "task_id": "5b6ff4bd6f9249e68ece5385e97176cc",
+        "client_observed_completion_ms": 1030.49,
+        "aggregation": {
+          "raw_count": 1,
+          "group_count": 1,
+          "reduction_rate": 0.0,
+          "window_seconds": 10
+        },
+        "historical_packet_to_ingestion_seconds": {
+          "mean": 25981845.554384,
+          "max": 25981845.554384,
+          "interpretation": "历史样本墙钟差，包含样本年代，不可用来评价引擎处理速度"
+        }
+      },
+      {
+        "scenario": "web_sqli_case",
+        "tp_expectations": 1,
+        "fn_expectations": 0,
+        "matched_alerts": 1,
+        "fp_alerts": 0,
+        "precision_alert_level": 1.0,
+        "recall_expectation_level": 1.0,
+        "precision_finding_level": 1.0,
+        "fp_findings": 0,
+        "f1_finding_level": 1.0,
+        "false_positives": [],
+        "task_id": "4aa8f379c565488da101179dcc36b43e",
+        "client_observed_completion_ms": 1028.18,
+        "aggregation": {
+          "raw_count": 1,
+          "group_count": 1,
+          "reduction_rate": 0.0,
+          "window_seconds": 10
+        },
+        "historical_packet_to_ingestion_seconds": {
+          "mean": 25981846.588349,
+          "max": 25981846.588349,
+          "interpretation": "历史样本墙钟差，包含样本年代，不可用来评价引擎处理速度"
+        }
+      },
+      {
+        "scenario": "web_xss",
+        "tp_expectations": 1,
+        "fn_expectations": 0,
+        "matched_alerts": 1,
+        "fp_alerts": 0,
+        "precision_alert_level": 1.0,
+        "recall_expectation_level": 1.0,
+        "precision_finding_level": 1.0,
+        "fp_findings": 0,
+        "f1_finding_level": 1.0,
+        "false_positives": [],
+        "task_id": "ec3f680dd04946d28c43a06c5be578a5",
+        "client_observed_completion_ms": 1028.95,
+        "aggregation": {
+          "raw_count": 1,
+          "group_count": 1,
+          "reduction_rate": 0.0,
+          "window_seconds": 10
+        },
+        "historical_packet_to_ingestion_seconds": {
+          "mean": 25981847.622316,
+          "max": 25981847.622316,
+          "interpretation": "历史样本墙钟差，包含样本年代，不可用来评价引擎处理速度"
+        }
+      }
+    ],
+    "limitations": [
+      "已覆盖 Web、扫描、异常 DNS、HTTP 认证失败四类线索；正常基线的 DNS 仅查询、TLS 仅 ClientHello，不含完整握手",
+      "finding 聚合只用于评测误报计数，尚非业务告警抑制功能",
+      "离线抓包历史时间与处理时间分开，不用历史包到当前日期的差值冒充检测耗时"
+    ]
+  }
+}
