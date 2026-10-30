@@ -9,12 +9,12 @@ restart() { docker compose start backend >/dev/null; }
 trap restart EXIT INT TERM
 docker compose stop backend
 docker compose run --rm --no-deps --user 0:0 -v "$directory:/backup" backend \
-    python3 /app/maintenance.py backup --archive "/backup/$archive"
+    python3 /app/maintenance.py backup --archive "/backup/$archive" < /dev/null
 docker compose start backend
 trap - EXIT INT TERM
 # This restoration cannot touch the live volume: target is independent tmpfs.
 docker compose run --rm --no-deps --user 0:0 -v "$directory:/backup:ro" backend \
-    python3 /app/maintenance.py restore --state /tmp/restore --archive "/backup/$archive" \
+    python3 /app/maintenance.py restore --state /tmp/restore --archive "/backup/$archive" < /dev/null \
     > .runtime-reports/backup-drill.json
 cat .runtime-reports/backup-drill.json
 echo "Backup verified: $directory/$archive"
