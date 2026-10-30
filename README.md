@@ -64,3 +64,5 @@ SQLite 降低部署复杂度，单 worker 和四项队列限制引擎资源；�
 已完成统计图表、聚合指标、应用 pip 审计和独立空卷验收。已通过真实 Chrome 回归，具备登录失败限流、规则版本回滚和磁盘余量上传保护；系统包漏洞审计、硬性磁盘配额及无缓存全新操作系统复验仍未完成。只暴露 HTTP 80 的演示环境不提供传输加密。正常样本 DNS 仅查询，TLS 仅 ClientHello。具体安全审查见 agent-log/review.md。最终录屏和实际工时不得伪造。
 
 目录沿用题面：rules、backend、frontend、data、validation、agent-log、docs；开发关键提交与真实错误记录保留。初始化脚本已在独立目录、端口和空数据卷验证成功（24 秒，使用镜像缓存）；不等同无缓存全新服务器验收，详见 docs/acceptance-result.md。
+
+界面布局参考[若依前端手册](https://doc.ruoyi.vip/ruoyi/document/qdsc.html)中查询区、工具栏、表格和分页的常见后台组织方式。页面组件为本项目独立实现，未引入若依框架或拷贝其源码。
