@@ -1,10 +1,12 @@
 """Ubuntu/root bootstrap of a public HTTPS repository; no Git write operations."""
 import argparse
+import errno
 import base64
 import getpass
 import json
 import os
 import pathlib
+import re
 import socket
 import subprocess
 import tempfile
@@ -134,6 +136,69 @@ def prepare_image(image):
     raise RuntimeError('镜像下载失败；未停止现有服务，修复网络后可直接重试')
 
 
+def published_ports(bind, own_id):
+    occupied, owned = set(), set()
+    ids = run(['docker','ps','--format','{{.ID}}'], capture=True).split()
+    for identifier in ids:
+        mappings = json.loads(run(['docker','inspect','--format','{{json .NetworkSettings.Ports}}',identifier], capture=True)) or {}
+        for protocol, values in mappings.items():
+            if not protocol.endswith('/tcp'):
+                continue
+            for entry in values or []:
+                host = entry.get('HostIp','0.0.0.0')
+                if bind == '0.0.0.0' or host in (bind,'0.0.0.0','::',''):
+                    (owned if own_id and own_id.startswith(identifier) else occupied).add(int(entry['HostPort']))
+    return occupied, owned
+
+
+def port_is_free(bind, port):
+    with socket.socket() as probe:
+        try:
+            probe.bind((bind,port))
+            return True
+        except OSError as exc:
+            if exc.errno in (errno.EADDRINUSE, errno.EACCES, 10048, 10013):
+                return False
+            raise
+
+
+def find_port(bind, start, occupied, owned, probe=port_is_free):
+    if not 1 <= start <= 65535:
+        raise ValueError('起始业务端口必须在1至65535之间')
+    for candidate in range(start,65536):
+        if candidate not in occupied and (candidate in owned or probe(bind,candidate)):
+            return candidate
+    raise RuntimeError('从起始端口到65535均不可用，未停止任何其他服务')
+
+
+def persist_port(target, port):
+    path = target / '.env'
+    text = path.read_text(encoding='utf-8')
+    line = 'WEB_PORT=' + dotenv_quote(str(port))
+    text = re.sub(r'^WEB_PORT\s*=.*$', lambda _: line, text, flags=re.M) if re.search(r'^WEB_PORT\s*=',text,re.M) else text.rstrip()+'\n'+line+'\n'
+    temporary = target / ('.env.port-'+os.urandom(8).hex())
+    try:
+        descriptor = os.open(temporary,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
+        with os.fdopen(descriptor,'w',encoding='utf-8',newline='\n') as stream:
+            stream.write(text)
+        os.replace(temporary,path)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def ensure_port(target, compose, bind, start):
+    own_id = run(compose+['ps','-q','web'],cwd=target,capture=True).strip()
+    occupied, owned = published_ports(bind,own_id)
+    selected = find_port(bind,start,occupied,owned)
+    if selected != start:
+        persist_port(target,selected)
+        check = json.loads(run(compose+['config','--format','json'],cwd=target,capture=True))
+        if int(check['services']['web']['ports'][0]['published']) != selected:
+            raise RuntimeError('外部WEB_PORT环境变量覆盖了配置，无法自动调整端口')
+        print('端口 '+str(start)+' 不可用，自动改用 '+str(selected)+'。',flush=True)
+    return selected
+
+
 def install(args):
     import fcntl
     target = pathlib.Path.home() / args.directory
@@ -171,13 +236,7 @@ def install(args):
             raise RuntimeError('密码特殊字符编码校验失败，拒绝启动；密码未输出')
         port = int(config['services']['web']['ports'][0]['published'])
         bind = config['services']['web']['ports'][0].get('host_ip','0.0.0.0')
-        own_web = run(compose + ['ps','-q','web'], cwd=target, capture=True).strip()
-        if not own_web:
-            with socket.socket() as probe:
-                try:
-                    probe.bind((bind,port))
-                except OSError:
-                    raise RuntimeError('业务端口已被其他程序占用，未停止任何其他服务')
+        port = ensure_port(target,compose,bind,port)
         prepare_image('debian:12.9-slim')
         prepare_image(config['services']['web']['image'])
         revision = run(['git','rev-parse','HEAD'], cwd=target, capture=True).strip()
@@ -185,6 +244,8 @@ def install(args):
         print('正在构建后端，请等待软件包安装；构建失败不会下架旧服务。', flush=True)
         run(['docker','build','--pull=false','--progress=plain','--label','org.opencontainers.image.revision='+revision,
              '-f','backend/Dockerfile','-t',backend_image,'.'], cwd=target, timeout=1800)
+        # Building can take minutes; recheck before stopping our old containers.
+        port = ensure_port(target,compose,bind,port)
         run(compose + ['down','--remove-orphans'], cwd=target)
         run(compose + ['up','-d','--no-build','--pull','never','--wait','--wait-timeout','120'], cwd=target, timeout=180)
         if bind == '0.0.0.0' and pathlib.Path('/usr/sbin/ufw').exists():
@@ -204,10 +265,21 @@ def install(args):
         (reports / 'public-install.json').write_text(json.dumps({
             'completed_at_epoch': time.time(), 'source_revision': revision,
             'source_url': REPOSITORY, 'project': args.project, 'web_port': port,
+            'internal_web_port': 8080, 'internal_backend_port': 8000,
             'login_verified': True, 'password_file_mode': oct((target / '.env').stat().st_mode & 0o777),
             'passwords_committed': False}, indent=2), encoding='utf-8')
         print('安装及登录验证通过。版本：'+revision, flush=True)
         print('密码仅保存到服务器 '+str(target / '.env')+'（权限600），未提交到Git。', flush=True)
+        host = args.server_address or '服务器IP'
+        if ':' in host:
+            host = '['+host+']'
+        if bind == '127.0.0.1':
+            print('服务仅监听服务器本机：http://127.0.0.1:'+str(port)+'/，通过SSH转发访问，无需放行公网业务端口。',flush=True)
+        else:
+            print('访问地址：http://'+host+':'+str(port)+'/',flush=True)
+            print('需要在云安全组放行：TCP '+str(port)+'（SSH运维端口另外保留）。',flush=True)
+        print('端口路径：公网/宿主机 '+str(port)+' → Nginx容器 8080 → 内部 backend:8000。',flush=True)
+        print('8080和8000不发布到宿主机，无需对公网开放；前后端通过Docker内部网络通信。',flush=True)
 
 
 if __name__ == '__main__':
@@ -218,6 +290,7 @@ if __name__ == '__main__':
     parser.add_argument('--project', default='jinjing-yunhua')
     parser.add_argument('--backend-image', default='jinjing-backend:stage1')
     parser.add_argument('--use-downloaded-code', action='store_true')
+    parser.add_argument('--server-address', default='')
     arguments = parser.parse_args()
     if pathlib.PurePosixPath(arguments.directory).is_absolute() or '..' in pathlib.PurePosixPath(arguments.directory).parts:
         parser.error('安装目录必须是用户目录下的相对路径')

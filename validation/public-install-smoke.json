@@ -16,5 +16,14 @@
   "scope": "Existing Ubuntu host with Docker/dependencies/base-image cache. Anonymous HTTPS clone succeeded after retry; remaining steps explicitly used downloaded clean code due intermittent GitHub HTTPS failures. Not a new-OS uncached test. A separate --no-cache backend build downloaded APT packages and succeeded (base image remained cached).",
   "backend_no_cache_build_verified": true,
   "apt_install_step_seconds": 31.6,
-  "base_images_cached_during_test": true
+  "base_images_cached_during_test": true,
+  "port_increment_test": {
+    "requested": 18082,
+    "occupied_by": "dedicated loopback-only test container",
+    "selected": 18083,
+    "persisted": true,
+    "login_verified": true,
+    "internal_web_port": 8080,
+    "internal_backend_port": 8000
+  }
 }
