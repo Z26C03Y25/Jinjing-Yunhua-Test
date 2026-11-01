@@ -57,7 +57,7 @@ text('4. 复现与未完成项', 13, '#0f172a', 22)
 text('Ubuntu + Docker Compose：make validate。逐场景证据、指标定义及任务 ID 见 validation/report.json。')
 text('独立空卷初始化与九场景安全验收通过，24-25 秒，使用已有镜像缓存；不等同无缓存全新机器验收。')
 text('已做应用 pip 审计、权限/输入/跨源/限流测试；浏览器 XSS 文本渲染实测已通过；系统包漏洞扫描及依赖完整快照未完成。')
-text('公网仅 HTTP；高可用等不在本题范围。项目协作投入约7小时（记录复盘，含AI执行等待，非精确人工计时）；未代签。',size=9)
+text('公网仅 HTTP；高可用等不在本题范围。项目协作投入约9小时（记录复盘，含AI执行等待，非精确人工计时）；未代签。',size=9)
 assert y > 40, y
 c.setFont('ReportChinese', 8)
 c.setFillColor(HexColor('#94a3b8'))

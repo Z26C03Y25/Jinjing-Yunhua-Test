@@ -8,7 +8,7 @@ import subprocess
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--sessions-root', type=pathlib.Path, default=pathlib.Path.home()/'.codex/sessions')
-parser.add_argument('--cutoff-revision', default='917409e')
+parser.add_argument('--cutoff-revision', default='c87c82c')
 args = parser.parse_args()
 zone = dt.timezone(dt.timedelta(hours=8))
 cutoff = dt.datetime.fromisoformat(subprocess.check_output(['git','show','-s','--format=%cI',args.cutoff_revision],text=True).strip())
@@ -61,6 +61,6 @@ def summarize(gap):
     return {'hours':round(sum(daily.values()),3),'daily_hours':{k:round(v,3) for k,v in daily.items()},'intervals':[[a.astimezone(zone).isoformat(),b.astimezone(zone).isoformat()] for a,b in intervals]}
 
 
-report = {'cutoff_revision':args.cutoff_revision,'cutoff_time':cutoff.isoformat(),'timezone':'Asia/Shanghai','session_files':source_files,'git_commits_by_day':dict(commits),'method':'Union of project main-thread activity and Git timestamps; deduplicate; split at gaps over 15 minutes and at midnight. Guardian threads and unrelated projects excluded. No fixed minutes added per commit.','activity_proxy':summarize(15),'sensitivity_30min':summarize(30),'stated_estimate_hours':7,'limitation':'Retrospective activity-session estimate including AI execution and waits; not precise human labor measurement. Does not include future recording or reconstruct unlogged offline effort.'}
+report = {'cutoff_revision':args.cutoff_revision,'cutoff_time':cutoff.isoformat(),'timezone':'Asia/Shanghai','session_files':source_files,'git_commits_by_day':dict(commits),'method':'Union of project main-thread activity and Git timestamps; deduplicate; split at gaps over 15 minutes and at midnight. Guardian threads and unrelated projects excluded. No fixed minutes added per commit.','activity_proxy':summarize(15),'sensitivity_30min':summarize(30),'stated_estimate_hours':round(summarize(15)['hours']),'limitation':'Retrospective activity-session estimate including AI execution and waits; not precise human labor measurement. Includes recorded installation and video work up to cutoff; does not reconstruct unlogged offline effort.'}
 pathlib.Path('validation/effort-summary.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
 print(json.dumps(report,ensure_ascii=True))
