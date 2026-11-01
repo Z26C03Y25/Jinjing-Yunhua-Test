@@ -13,5 +13,8 @@
   "password_file_mode": "0o600",
   "passwords_committed": false,
   "test_containers_stopped": true,
-  "scope": "Existing Ubuntu host with Docker/dependencies/base-image cache. Anonymous HTTPS clone succeeded after retry; remaining steps explicitly used downloaded clean code due intermittent GitHub HTTPS failures. Not a new-OS uncached test."
+  "scope": "Existing Ubuntu host with Docker/dependencies/base-image cache. Anonymous HTTPS clone succeeded after retry; remaining steps explicitly used downloaded clean code due intermittent GitHub HTTPS failures. Not a new-OS uncached test. A separate --no-cache backend build downloaded APT packages and succeeded (base image remained cached).",
+  "backend_no_cache_build_verified": true,
+  "apt_install_step_seconds": 31.6,
+  "base_images_cached_during_test": true
 }
