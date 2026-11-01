@@ -9,6 +9,7 @@ import pathlib
 import re
 import time
 import statistics
+import subprocess
 import urllib.request
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -94,17 +95,34 @@ def main():
     summary = {'matched_alerts': sum(r['matched_alerts'] for r in results), 'fp_alerts': sum(r['fp_alerts'] for r in results), 'tp_expectations': sum(r['tp_expectations'] for r in results), 'fn_expectations': sum(r['fn_expectations'] for r in results)}
     summary['precision_alert_level'] = summary['matched_alerts'] / (summary['matched_alerts'] + summary['fp_alerts']) if summary['matched_alerts'] + summary['fp_alerts'] else None
     summary['recall_expectation_level'] = summary['tp_expectations'] / (summary['tp_expectations'] + summary['fn_expectations']) if summary['tp_expectations'] + summary['fn_expectations'] else None
+    summary['precision_finding_level'] = summary['tp_expectations'] / (summary['tp_expectations'] + sum(r['fp_findings'] for r in results)) if summary['tp_expectations'] + sum(r['fp_findings'] for r in results) else None
+    p, r = summary['precision_finding_level'], summary['recall_expectation_level']
+    summary['f1_finding_level'] = 2*p*r/(p+r) if p is not None and r is not None and p+r else 0
+    historical = [(x['historical_packet_to_ingestion_seconds'], x['matched_alerts']+x['fp_alerts']) for x in results if 'historical_packet_to_ingestion_seconds' in x]
+    if historical:
+        summary['historical_packet_to_ingestion_seconds'] = {'mean': sum(h['mean']*n for h,n in historical)/sum(n for h,n in historical), 'max': max(h['max'] for h,n in historical), 'interpretation':'首攻击包至入库的历史墙钟差，包含样本年代，不是性能指标'}
     summary['raw_alerts'] = sum(r['aggregation']['raw_count'] for r in results)
     summary['aggregate_groups'] = sum(r['aggregation']['group_count'] for r in results)
     summary['reduction_rate'] = 1-summary['aggregate_groups']/summary['raw_alerts'] if summary['raw_alerts'] else 0
     summary['client_completion_ms_mean'] = round(statistics.mean(r['client_observed_completion_ms'] for r in results), 2)
     summary['client_completion_ms_max'] = max(r['client_observed_completion_ms'] for r in results)
-    report = {'summary': summary, 'metric_definition': '原始告警精确率单列；finding 精确率/召回率/F1 使用期望命中项与同 SID 五元组十秒窗的误报组计数。完成耗时为客户端提交到收齐结果，含排队、网络和轮询，不是首攻击包到入库时延。', 'generated_at': dt.datetime.now(dt.timezone.utc).isoformat(), 'results': results,
-              'limitations': ['已覆盖 Web、扫描、异常 DNS、HTTP 认证失败四类线索；正常基线的 DNS 仅查询、TLS 仅 ClientHello，不含完整握手', 'finding 聚合只用于评测误报计数，尚非业务告警抑制功能', '离线抓包历史时间与处理时间分开，不用历史包到当前日期的差值冒充检测耗时']}
+    revision = subprocess.check_output(['git','rev-parse','HEAD'], text=True).strip()
+    report = {'source_revision': revision, 'summary': summary, 'metric_definition': '原始告警精确率单列；finding 精确率/召回率/F1 使用期望命中项与同 SID 五元组十秒窗的误报组计数。完成耗时为客户端提交到收齐结果，含排队、网络和轮询，不是首攻击包到入库时延。', 'generated_at': dt.datetime.now(dt.timezone.utc).isoformat(), 'results': results,
+              'limitations': ['已覆盖 Web、扫描、异常 DNS、HTTP 认证失败四类线索；正常基线的 DNS 仅查询、TLS 仅 ClientHello，不含完整握手', '评测误报分组与业务固定时间桶聚合分开计算；原始告警始终保留', '离线抓包历史时间与处理时间分开，不用历史包到当前日期的差值冒充检测耗时']}
     (ROOT / 'validation/report.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
-    lines = ['# 真实 API 自验结果', '', '| 场景 | 期望 TP | 期望 FN | 告警 FP |', '| --- | --- | --- | --- |']
-    lines += [f"| {r['scenario']} | {r['tp_expectations']} | {r['fn_expectations']} | {r['fp_alerts']} |" for r in results]
-    lines += ['', '统计口径与未完成项见 report.json。正常样本无告警时 precision/recall 为 null，不将其伪称为 100%。']
+    def metric(value):
+        return 'N/A' if value is None else f'{value:.2%}'
+    lines = ['# 真实 API 自验结果', '', '生成时间：'+report['generated_at'], '代码版本：'+revision, '',
+             '| 场景 | TP期望 | FN期望 | FP告警 | P告警级 | R期望级 | F1 finding级 | 完成耗时ms |',
+             '| --- | --- | --- | --- | --- | --- | --- | --- |']
+    lines += [f"| {x['scenario']} | {x['tp_expectations']} | {x['fn_expectations']} | {x['fp_alerts']} | {metric(x['precision_alert_level'])} | {metric(x['recall_expectation_level'])} | {metric(x['f1_finding_level'])} | {x['client_observed_completion_ms']} |" for x in results]
+    lines += ['', f"总体告警级Precision：{metric(summary['precision_alert_level'])}；期望级Recall：{metric(summary['recall_expectation_level'])}；finding级F1：{metric(summary['f1_finding_level'])}。",
+              f"原始{summary['raw_alerts']}条 → {summary['aggregate_groups']}组，去重率{metric(summary['reduction_rate'])}。",
+              f"客户端完成耗时均值{summary['client_completion_ms_mean']}ms，最大{summary['client_completion_ms_max']}ms（含网络、排队、轮询）。",
+              '', '## 统计口径', report['metric_definition'], '无告警且无期望的正常样本指标记为N/A，不冒充100%。总体Recall以期望项为分母，原始告警无法为漏掉的事件构造告警条数，因此不混淆单位。',
+              '', '## 时延与误报', '首攻击包到入库的历史墙钟差均值/最大值见JSON summary.historical_packet_to_ingestion_seconds；包含样本年代，不能当作引擎处理性能。',
+              '误报逐条保存在各场景false_positives数组；本轮为零则不存在可归因的误报记录。HTTP 401也可能来自正常重试，不能泛化为零误报。',
+              '', '## 变异与FN', 'SQLi大小写变异被nocase检出；慢扫两秒一包，低于十秒超过二十次SYN阈值，保留FN，不修改期望追求全绿。']
     (ROOT / 'validation/report.md').write_text('\n'.join(lines), encoding='utf-8')
     print('\n'.join(lines))
 

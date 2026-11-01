@@ -10,6 +10,7 @@ param(
     [switch]$Deploy,
     [switch]$Acceptance,
     [switch]$Backup,
+    [switch]$PrepareRecording,
     [switch]$SkipCommit
 )
 $ErrorActionPreference = 'Stop'
@@ -251,7 +252,10 @@ if [ '__DEPLOY__' = 1 ]; then
 fi
 '__BACKUP__' && sh scripts/backup-drill.sh
 '__ACCEPTANCE__' && sh scripts/acceptance.sh
+'__RECORDING__' && sh scripts/prepare-recording.sh
 '@
+    $recordingCommand = if ($PrepareRecording) { 'true' } else { 'false' }
+    $remoteScript = $remoteScript.Replace("'__RECORDING__' && sh scripts/prepare-recording.sh", "if $recordingCommand; then sh scripts/prepare-recording.sh; fi")
     $backupCommand = if ($Backup) { 'true' } else { 'false' }
     $remoteScript = $remoteScript.Replace("'__BACKUP__' && sh scripts/backup-drill.sh", "if $backupCommand; then sh scripts/backup-drill.sh; fi")
     $acceptanceCommand = if ($Acceptance) { 'true' } else { 'false' }

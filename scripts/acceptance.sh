@@ -24,5 +24,7 @@ fi
 export ACCEPTANCE_STARTED="$started"
 python3 scripts/acceptance_api.py
 mkdir -p "$source_dir/.runtime-reports"
+cp validation/report.json "$source_dir/.runtime-reports/final-report.json"
+cp validation/report.md "$source_dir/.runtime-reports/final-report.md"
 cp validation/acceptance-report.json "$source_dir/.runtime-reports/acceptance-report.json"
 echo '独立启动与 API 自验完成，临时容器和数据卷即将清理。'
