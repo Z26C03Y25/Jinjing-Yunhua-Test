@@ -8,3 +8,4 @@ validate: up
 test:
 	python3 -m unittest discover -s backend -v
 	python3 -m unittest discover -s validation -v
+	python3 -m unittest discover -s tests -p 'test_*.py' -v

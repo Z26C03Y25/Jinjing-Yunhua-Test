@@ -11,3 +11,7 @@ docs
 .audit-tools
 .audit-env
 .runtime-reports
+.runtime-backups
+.recording
+output/delivery
+tmp

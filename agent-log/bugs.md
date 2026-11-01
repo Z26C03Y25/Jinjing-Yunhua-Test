@@ -53,3 +53,11 @@ AI首次使用docker compose run --tmpfs；实际服务器返回unknown flag，�
 
 真实Chrome错误密码测试等待页面错误提示超时。原API的401总带WWW-Authenticate，触发浏览器原生Basic认证交互，使自建登录流程无法正常结束。前端请求标识XMLHttpRequest，后端仅对这类请求省略challenge，仍返回401且继续校验角色和密码；非XHR客户端行为保留。服务器实测错误密码、回车登录、深链接保护、退出清理通过，检测与CRUD回归通过。
 
+
+# 2026-11-01：公开安装器的严格权限影响容器
+
+为保护密码设置umask077后，Git克隆的公开代码也变成600/700。实际隔离安装时非root后端报/app/server.py Permission denied。修复为只对Git跟踪的公开源码和目录恢复可读/可遍历权限，.env保持600；Dockerfile也对镜像内公开/app增加a+rX。隔离构建、健康及真实登录随后通过。同步修复录制准备目录的同类问题。
+
+# 2026-11-01：Compose配置序列化并非密码原值
+
+带$、引号和反斜杠的测试密码在Compose config JSON中为重序列化而转义，直接比较误报不一致。用不输出秘密的远程比较确认config --environment提供实际解析值，改用该值校验并执行真实/api/me登录。配置始终保存在600权限.env，未输出或提交密码。

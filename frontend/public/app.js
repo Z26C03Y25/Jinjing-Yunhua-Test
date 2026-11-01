@@ -31,7 +31,7 @@ function signOut(message=''){
 }
 el('loginForm').onsubmit=async event=>{
   event.preventDefault();const button=el('login');button.disabled=true;el('loginError').textContent='';
-  try{auth='Basic '+btoa(el('username').value+':'+el('password').value);const me=await api('/me');readonly=me.readonly;el('upload').disabled=readonly;await tasks();el('identity').textContent=me.readonly?'只读用户':'分析员';el('password').value='';document.body.classList.add('authenticated');status('')}
+  try{auth='Basic '+btoa(Array.from(new TextEncoder().encode(el('username').value+':'+el('password').value),b=>String.fromCharCode(b)).join(''));const me=await api('/me');readonly=me.readonly;el('upload').disabled=readonly;await tasks();el('identity').textContent=me.readonly?'只读用户':'分析员';el('password').value='';document.body.classList.add('authenticated');status('')}
   catch(e){signOut(e.message==='unauthorized'?'角色或密码不正确':e.message)}finally{button.disabled=false}
 };
 el('upload').onclick=async()=>{try{const f=el('file').files[0];if(!f)throw Error('请先选择 PCAP 文件');if(f.size>20*1024*1024)throw Error('文件超过 20 MB');el('upload').disabled=true;const r=await api('/tasks',{method:'POST',headers:{'Content-Type':'application/octet-stream'},body:f});status('任务已提交：'+r.id+'，请刷新查看进度');await tasks()}catch(e){status(e.message)}finally{el('upload').disabled=readonly}};

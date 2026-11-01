@@ -14,7 +14,7 @@ COPY backend/ /app/
 COPY rules/ /app/rules/
 RUN dpkg-query -W -f='${Package}\t${Version}\n' > /app/system-packages.tsv \
     && suricata --build-info > /app/engine-build-info.txt
-RUN mkdir -p /state && chown -R 10001:10001 /state
+RUN chmod -R a+rX /app && mkdir -p /state && chown -R 10001:10001 /state
 USER 10001:10001
 ENV STATE_DIR=/state PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 CMD ["python3", "/app/server.py"]

@@ -16,6 +16,16 @@ make up
 
 浏览器访问服务器 HTTP 80。只发布业务端口 80，内部后端 8000 不对外开放。SSH 仅用于运维。宿主机已有 Nginx 占用 80 时需先协调端口。
 
+## 新服务器自动安装（公开仓库）
+
+服务器只需先安装Docker并允许root通过SSH登录。在Windows运行：
+
+```bat
+scripts\install-public.cmd -Server 服务器IP
+```
+
+按提示输入SSH密码，再设置分析员和可选只读密码；其余依赖、HTTPS克隆、镜像、构建、启动和登录校验自动完成。无需GitHub密钥或本地Git。系统密码仅保存到服务器.env（600），不提交Git。详情见[新服务器安装说明](docs/新服务器自动安装.md)。云安全组需允许80端口。
+
 ## Windows 开发部署
 
 ```bat

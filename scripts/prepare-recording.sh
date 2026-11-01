@@ -6,6 +6,22 @@ source_dir=$(pwd)
 target="$source_dir/.recording/workspace"
 if [ -e "$target" ]; then
     echo '录制目录已存在，保留内容，不覆盖或删除。'
+    python3 - "$target" <<'PY'
+import pathlib,subprocess,sys
+root=pathlib.Path(sys.argv[1])
+for name in subprocess.check_output(['git','-C',str(root),'ls-files','-z']).decode().split('\0'):
+    if not name:
+        continue
+    path=root/name
+    if path.is_symlink() or root.resolve() not in path.resolve().parents:
+        raise SystemExit('Unsafe source path')
+    path.chmod(0o755 if path.stat().st_mode & 0o111 else 0o644)
+    for parent in path.parents:
+        parent.chmod(0o755)
+        if parent==root:
+            break
+(root/'.env').chmod(0o600)
+PY
     exit 0
 fi
 if [ -n "$(docker volume ls -q --filter label=com.docker.compose.project=jinjing-recording)" ]; then
@@ -23,6 +39,17 @@ for key in ('APP_PASSWORD','VIEWER_PASSWORD'):
     text+=key+'='+values.get(key,'')+'\n'
 (target/'.env').write_text(text)
 os.chmod(target/'.env',0o600)
+for name in __import__('subprocess').check_output(['git','-C',str(target),'ls-files','-z']).decode().split('\0'):
+    if not name:
+        continue
+    path=target/name
+    if path.is_symlink() or target.resolve() not in path.resolve().parents:
+        raise SystemExit('Unsafe source path')
+    path.chmod(0o755 if path.stat().st_mode & 0o111 else 0o644)
+    for parent in path.parents:
+        parent.chmod(0o755)
+        if parent==target:
+            break
 PY
 cd "$target"
 docker compose config --quiet

@@ -1,0 +1,17 @@
+{
+  "completed_at_epoch": 1793525860.4618895,
+  "source_revision": "6dd066cdcdf04305c9715e4a4518da89ab520580",
+  "source_url": "https://github.com/Z26C03Y25/Jinjing-Yunhua-Test.git",
+  "project": "jinjing-installer-test",
+  "web_port": 18082,
+  "anonymous_https_clone_verified": true,
+  "interactive_secret_entry_verified": true,
+  "special_characters_verified": true,
+  "existing_password_preserved": true,
+  "public_code_readable_to_container": true,
+  "login_verified": true,
+  "password_file_mode": "0o600",
+  "passwords_committed": false,
+  "test_containers_stopped": true,
+  "scope": "Existing Ubuntu host with Docker/dependencies/base-image cache. Anonymous HTTPS clone succeeded after retry; remaining steps explicitly used downloaded clean code due intermittent GitHub HTTPS failures. Not a new-OS uncached test."
+}
