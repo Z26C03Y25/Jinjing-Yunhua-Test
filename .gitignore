@@ -38,3 +38,5 @@ tmp/
 .runtime-release/
 
 output/delivery/
+
+output/recording-tools/

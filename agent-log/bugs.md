@@ -61,3 +61,9 @@ AI首次使用docker compose run --tmpfs；实际服务器返回unknown flag，�
 # 2026-11-01：Compose配置序列化并非密码原值
 
 带$、引号和反斜杠的测试密码在Compose config JSON中为重序列化而转义，直接比较误报不一致。用不输出秘密的远程比较确认config --environment提供实际解析值，改用该值校验并执行真实/api/me登录。配置始终保存在600权限.env，未输出或提交密码。
+
+## 2026-11-01 录制发现非默认端口上传失败
+- 现象：SSH 转发到 18080 后登录成功，上传 PCAP 被同源检查拒绝。
+- 原因：Nginx 使用 $host 转发 Host，丢失请求中的端口，与 Origin 的 netloc 不一致。
+- 修复：使用 $http_host 保留原始 Host 与端口，后端同源检查保持启用。
+- 验证：独立录制环境 nginx -t 通过；后端 14 项单元测试通过；浏览器上传复验见录制结果。
