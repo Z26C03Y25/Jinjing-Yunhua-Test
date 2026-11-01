@@ -73,5 +73,5 @@ SQLite 降低部署复杂度，单 worker 和四项队列限制引擎资源；�
 - [题面对照验收](docs/delivery-checklist.md)：Must/Should/Could及验证边界。
 - [一页自验报告](output/pdf/自验报告.pdf)、[完整评测](validation/report.md)。
 - [提交说明](docs/提交说明.md)：材料路径与邮件草稿，未发送。
-- 实际人工工时未单独记录，Git提交日期不等于工时；个人资料不猜测、不冒签。
+- 提交人张椿雨（吉林化工大学，计算机科学与技术）；项目协作投入约7小时，按Git/Codex活动记录估算，含AI执行等待、非精确人工计时，详见docs/工时记录.md；不冒签。
 - 部分docs/stage*及implementation-plan为开发历史，最终操作以使用指南和开始录制为准。

@@ -31,6 +31,7 @@ def text(value, size=10, color='#334155', gap=16):
 
 text('金睛云华 / 流量威胁检测系统', 21, '#0f766e', 30)
 text('真实离线回放自验 | '+report['generated_at'][:10]+' | 代码 '+report.get('source_revision','未记录')[:10], 10, '#64748b', 23)
+text('提交人：张椿雨 | 吉林化工大学 | 计算机科学与技术', 9, '#64748b', 18)
 s = report['summary']
 text('1. 结论', 13, '#0f172a', 21)
 text(f"四类攻击线索，九个场景；期望命中 {s['tp_expectations']}，FN {s['fn_expectations']}，FP {s['fp_alerts']}。")
@@ -56,7 +57,7 @@ text('4. 复现与未完成项', 13, '#0f172a', 22)
 text('Ubuntu + Docker Compose：make validate。逐场景证据、指标定义及任务 ID 见 validation/report.json。')
 text('独立空卷初始化与九场景安全验收通过，24-25 秒，使用已有镜像缓存；不等同无缓存全新机器验收。')
 text('已做应用 pip 审计、权限/输入/跨源/限流测试；浏览器 XSS 文本渲染实测已通过；系统包漏洞扫描及依赖完整快照未完成。')
-text('公网仅 HTTP；高可用等不在本题范围。实际人工工时未单独记录，不以Git跨度推算；未代签声明。',size=9)
+text('公网仅 HTTP；高可用等不在本题范围。项目协作投入约7小时（记录复盘，含AI执行等待，非精确人工计时）；未代签。',size=9)
 assert y > 40, y
 c.setFont('ReportChinese', 8)
 c.setFillColor(HexColor('#94a3b8'))

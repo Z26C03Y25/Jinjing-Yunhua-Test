@@ -1,0 +1,77 @@
+{
+  "cutoff_revision": "917409e",
+  "cutoff_time": "2026-11-01T13:42:08+08:00",
+  "timezone": "Asia/Shanghai",
+  "session_files": 2,
+  "git_commits_by_day": {
+    "2026-11-01": 2,
+    "2026-10-30": 26,
+    "2026-10-29": 36,
+    "2026-10-28": 17
+  },
+  "method": "Union of project main-thread activity and Git timestamps; deduplicate; split at gaps over 15 minutes and at midnight. Guardian threads and unrelated projects excluded. No fixed minutes added per commit.",
+  "activity_proxy": {
+    "hours": 6.626,
+    "daily_hours": {
+      "2026-10-28": 1.966,
+      "2026-10-29": 2.776,
+      "2026-10-30": 1.586,
+      "2026-11-01": 0.297
+    },
+    "intervals": [
+      [
+        "2026-10-28T21:47:01+08:00",
+        "2026-10-28T23:45:00.376000+08:00"
+      ],
+      [
+        "2026-10-29T00:05:26.717000+08:00",
+        "2026-10-29T00:48:46.996000+08:00"
+      ],
+      [
+        "2026-10-29T10:04:36.039000+08:00",
+        "2026-10-29T12:07:49.770000+08:00"
+      ],
+      [
+        "2026-10-29T12:34:23.566000+08:00",
+        "2026-10-29T12:34:23.566000+08:00"
+      ],
+      [
+        "2026-10-30T20:03:33.800000+08:00",
+        "2026-10-30T21:38:44.927000+08:00"
+      ],
+      [
+        "2026-11-01T13:24:19.039000+08:00",
+        "2026-11-01T13:42:08+08:00"
+      ]
+    ]
+  },
+  "sensitivity_30min": {
+    "hours": 7.409,
+    "daily_hours": {
+      "2026-10-28": 2.216,
+      "2026-10-29": 3.31,
+      "2026-10-30": 1.586,
+      "2026-11-01": 0.297
+    },
+    "intervals": [
+      [
+        "2026-10-28T21:47:01+08:00",
+        "2026-10-29T00:48:46.996000+08:00"
+      ],
+      [
+        "2026-10-29T10:04:36.039000+08:00",
+        "2026-10-29T12:34:23.566000+08:00"
+      ],
+      [
+        "2026-10-30T20:03:33.800000+08:00",
+        "2026-10-30T21:38:44.927000+08:00"
+      ],
+      [
+        "2026-11-01T13:24:19.039000+08:00",
+        "2026-11-01T13:42:08+08:00"
+      ]
+    ]
+  },
+  "stated_estimate_hours": 7,
+  "limitation": "Retrospective activity-session estimate including AI execution and waits; not precise human labor measurement. Does not include future recording or reconstruct unlogged offline effort."
+}
