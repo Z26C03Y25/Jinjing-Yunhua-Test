@@ -1,0 +1,91 @@
+This is Suricata version 7.0.10 RELEASE
+Features: NFQ PCAP_SET_BUFF AF_PACKET HAVE_PACKET_FANOUT LIBCAP_NG LIBNET1.1 HAVE_HTP_URI_NORMALIZE_HOOK PCRE_JIT HAVE_NSS HTTP2_DECOMPRESSION HAVE_LUA HAVE_JA3 HAVE_JA4 HAVE_LUAJIT HAVE_LIBJANSSON TLS TLS_C11 MAGIC RUST POPCNT64 
+SIMD support: SSE_4_2 SSE_4_1 SSE_3 SSE_2 
+Atomic intrinsics: 1 2 4 8 16 byte(s)
+64-bits, Little-endian architecture
+GCC version 12.2.0, C version 201112
+compiled with _FORTIFY_SOURCE=2
+L1 cache line size (CLS)=64
+thread local storage method: _Thread_local
+compiled with LibHTP v0.5.50, linked against LibHTP v0.5.50
+
+Suricata Configuration:
+  AF_PACKET support:                       yes
+  AF_XDP support:                          yes
+  DPDK support:                            yes
+  eBPF support:                            yes
+  XDP support:                             yes
+  PF_RING support:                         no
+  NFQueue support:                         yes
+  NFLOG support:                           yes
+  IPFW support:                            no
+  Netmap support:                          no 
+  DAG enabled:                             no
+  Napatech enabled:                        no
+  WinDivert enabled:                       no
+
+  Unix socket enabled:                     yes
+  Detection enabled:                       yes
+
+  Libmagic support:                        yes
+  libjansson support:                      yes
+  hiredis support:                         yes
+  hiredis async with libevent:             yes
+  PCRE jit:                                yes
+  LUA support:                             yes, through luajit
+  libluajit:                               yes
+  GeoIP2 support:                          yes
+  JA3 support:                             yes
+  JA4 support:                             yes
+  Non-bundled htp:                         yes
+  Hyperscan support:                       yes
+  Libnet support:                          yes
+  liblz4 support:                          yes
+  Landlock support:                        yes
+
+  Rust support:                            yes
+  Rust strict mode:                        no
+  Rust compiler path:                      /usr/bin/rustc
+  Rust compiler version:                   rustc 1.63.0
+  Cargo path:                              /usr/bin/cargo
+  Cargo version:                           cargo 1.65.0
+
+  Python support:                          yes
+  Python path:                             /usr/bin/python3
+  Install suricatactl:                     yes
+  Install suricatasc:                      yes
+  Install suricata-update:                 no, not bundled
+
+  Profiling enabled:                       no
+  Profiling locks enabled:                 no
+  Profiling rules enabled:                 no
+
+  Plugin support (experimental):           yes
+  DPDK Bond PMD:                           yes
+
+Development settings:
+  Coccinelle / spatch:                     no
+  Unit tests enabled:                      no
+  Debug output enabled:                    no
+  Debug validation enabled:                no
+  Fuzz targets enabled:                    no
+
+Generic build parameters:
+  Installation prefix:                     /usr
+  Configuration directory:                 /etc/suricata/
+  Log directory:                           /var/log/suricata/
+
+  --prefix                                 /usr
+  --sysconfdir                             /etc
+  --localstatedir                          /var
+  --datarootdir                            /usr/share
+
+  Host:                                    x86_64-pc-linux-gnu
+  Compiler:                                gcc (exec name) / g++ (real)
+  GCC Protect enabled:                     yes
+  GCC march native enabled:                no
+  GCC Profile enabled:                     no
+  Position Independent Executable enabled: no
+  CFLAGS                                   -g -O2 -ffile-prefix-map=/build/reproducible-path/suricata-7.0.10=. -fstack-protector-strong -Wformat -Werror=format-security -fPIC -std=c11 -I/usr/include/dpdk -I/usr/include/dpdk/../x86_64-linux-gnu/dpdk -include rte_config.h -march=corei7 -I/usr/include/libnl3 -I/usr/include/dbus-1.0 -I/usr/lib/x86_64-linux-gnu/dbus-1.0/include  -I${srcdir}/../rust/gen -I${srcdir}/../rust/dist
+  PCAP_CFLAGS                               -I/usr/include
+  SECCFLAGS                                -fstack-protector -D_FORTIFY_SOURCE=2 -Wformat -Wformat-security

@@ -1,0 +1,12 @@
+{
+  "verified_at": "2026-11-01T05:41:48.655407+00:00",
+  "source_revision": "6803c60daf67871064665dfdb910a0601d9d289d",
+  "workspace": "/root/code/Jinjing-Yunhua-Test/.recording/workspace",
+  "project": "jinjing-recording",
+  "bind": "127.0.0.1",
+  "port": 18080,
+  "data_volumes_before_recording": [],
+  "started": false,
+  "evidence": "Remote prepare script configured environment; git rev-parse confirmed revision; docker volume ls project filter returned no volumes",
+  "scope": "Empty application containers/data; existing base images and build cache"
+}

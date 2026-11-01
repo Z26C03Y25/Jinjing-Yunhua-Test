@@ -14,6 +14,7 @@
   "elapsed_seconds": 25,
   "scope": "空容器和数据卷、已有基础镜像缓存；不是空操作系统或无缓存镜像环境",
   "validation": {
+    "source_revision": "6803c60daf67871064665dfdb910a0601d9d289d",
     "summary": {
       "matched_alerts": 2353,
       "fp_alerts": 0,
@@ -21,14 +22,21 @@
       "fn_expectations": 1,
       "precision_alert_level": 1.0,
       "recall_expectation_level": 0.8571428571428571,
+      "precision_finding_level": 1.0,
+      "f1_finding_level": 0.923076923076923,
+      "historical_packet_to_ingestion_seconds": {
+        "mean": 26249679.163369622,
+        "max": 26249683.942512,
+        "interpretation": "首攻击包至入库的历史墙钟差，包含样本年代，不是性能指标"
+      },
       "raw_alerts": 2353,
       "aggregate_groups": 1156,
       "reduction_rate": 0.5087122821929452,
-      "client_completion_ms_mean": 1151.9,
-      "client_completion_ms_max": 1598.34
+      "client_completion_ms_mean": 1102.97,
+      "client_completion_ms_max": 1456.67
     },
     "metric_definition": "原始告警精确率单列；finding 精确率/召回率/F1 使用期望命中项与同 SID 五元组十秒窗的误报组计数。完成耗时为客户端提交到收齐结果，含排队、网络和轮询，不是首攻击包到入库时延。",
-    "generated_at": "2026-10-30T12:22:48.838867+00:00",
+    "generated_at": "2026-11-01T05:34:44.430762+00:00",
     "results": [
       {
         "scenario": "benign_http",
@@ -42,8 +50,8 @@
         "fp_findings": 0,
         "f1_finding_level": null,
         "false_positives": [],
-        "task_id": "336ab036d3b942d9b36b98c013b17230",
-        "client_observed_completion_ms": 1029.64,
+        "task_id": "e7c010271edd4f6f809f0eb98cc32a92",
+        "client_observed_completion_ms": 1038.49,
         "aggregation": {
           "raw_count": 0,
           "group_count": 0,
@@ -63,8 +71,8 @@
         "fp_findings": 0,
         "f1_finding_level": null,
         "false_positives": [],
-        "task_id": "157aaae7e7f44c45bb8107a3185c61a5",
-        "client_observed_completion_ms": 1030.29,
+        "task_id": "15391f00ebee4794bf9b16805b459489",
+        "client_observed_completion_ms": 1030.72,
         "aggregation": {
           "raw_count": 0,
           "group_count": 0,
@@ -84,8 +92,8 @@
         "fp_findings": 0,
         "f1_finding_level": 1.0,
         "false_positives": [],
-        "task_id": "3655cff3f06242f088101eee29d76857",
-        "client_observed_completion_ms": 1033.92,
+        "task_id": "c7ca2728efbc420f94128523bddf71cf",
+        "client_observed_completion_ms": 1028.38,
         "aggregation": {
           "raw_count": 10,
           "group_count": 10,
@@ -93,8 +101,8 @@
           "window_seconds": 10
         },
         "historical_packet_to_ingestion_seconds": {
-          "mean": 26101360.753017504,
-          "max": 26101360.753428,
+          "mean": 26249676.8668968,
+          "max": 26249676.867334,
           "interpretation": "历史样本墙钟差，包含样本年代，不可用来评价引擎处理速度"
         }
       },
@@ -110,8 +118,8 @@
         "fp_findings": 0,
         "f1_finding_level": 1.0,
         "false_positives": [],
-        "task_id": "370418147de04462affa84d913a6a5ef",
-        "client_observed_completion_ms": 1598.34,
+        "task_id": "7d038c8494ca45e49da2d24e1a7c8a49",
+        "client_observed_completion_ms": 1456.67,
         "aggregation": {
           "raw_count": 1200,
           "group_count": 3,
@@ -119,8 +127,8 @@
           "window_seconds": 10
         },
         "historical_packet_to_ingestion_seconds": {
-          "mean": 26101361.87706163,
-          "max": 26101361.919946,
+          "mean": 26249677.9393308,
+          "max": 26249677.982346,
           "interpretation": "历史样本墙钟差，包含样本年代，不可用来评价引擎处理速度"
         }
       },
@@ -136,8 +144,8 @@
         "fp_findings": 0,
         "f1_finding_level": 0,
         "false_positives": [],
-        "task_id": "11d274249cdd47f4842b3f42574e069e",
-        "client_observed_completion_ms": 1037.07,
+        "task_id": "b7337c9e06404fb78893aab5841cdfe7",
+        "client_observed_completion_ms": 1043.66,
         "aggregation": {
           "raw_count": 0,
           "group_count": 0,
@@ -157,8 +165,8 @@
         "fp_findings": 0,
         "f1_finding_level": 1.0,
         "false_positives": [],
-        "task_id": "10c729404759481fb0b87e2481998029",
-        "client_observed_completion_ms": 1530.56,
+        "task_id": "5a188c2c2906446a8a3f1aab6afdef40",
+        "client_observed_completion_ms": 1235.58,
         "aggregation": {
           "raw_count": 1140,
           "group_count": 1140,
@@ -166,8 +174,8 @@
           "window_seconds": 10
         },
         "historical_packet_to_ingestion_seconds": {
-          "mean": 26101364.542192716,
-          "max": 26101364.560579,
+          "mean": 26249680.462391973,
+          "max": 26249680.478736,
           "interpretation": "历史样本墙钟差，包含样本年代，不可用来评价引擎处理速度"
         }
       },
@@ -183,8 +191,8 @@
         "fp_findings": 0,
         "f1_finding_level": 1.0,
         "false_positives": [],
-        "task_id": "682fa71ce39e457597f280ad6cdcc507",
-        "client_observed_completion_ms": 1042.32,
+        "task_id": "16922c62d6414e13b5a26d0e53522301",
+        "client_observed_completion_ms": 1032.23,
         "aggregation": {
           "raw_count": 1,
           "group_count": 1,
@@ -192,8 +200,8 @@
           "window_seconds": 10
         },
         "historical_packet_to_ingestion_seconds": {
-          "mean": 26101366.125774,
-          "max": 26101366.125774,
+          "mean": 26249681.718337,
+          "max": 26249681.718337,
           "interpretation": "历史样本墙钟差，包含样本年代，不可用来评价引擎处理速度"
         }
       },
@@ -209,8 +217,8 @@
         "fp_findings": 0,
         "f1_finding_level": 1.0,
         "false_positives": [],
-        "task_id": "6c84ea6c7f114c9da12aec0704497bbc",
-        "client_observed_completion_ms": 1034.58,
+        "task_id": "a063714e3b564174a15efb421f4b471c",
+        "client_observed_completion_ms": 1030.71,
         "aggregation": {
           "raw_count": 1,
           "group_count": 1,
@@ -218,8 +226,8 @@
           "window_seconds": 10
         },
         "historical_packet_to_ingestion_seconds": {
-          "mean": 26101367.165223,
-          "max": 26101367.165223,
+          "mean": 26249682.75509,
+          "max": 26249682.75509,
           "interpretation": "历史样本墙钟差，包含样本年代，不可用来评价引擎处理速度"
         }
       },
@@ -235,8 +243,8 @@
         "fp_findings": 0,
         "f1_finding_level": 1.0,
         "false_positives": [],
-        "task_id": "396479abed9f4819a9607ad9698179f3",
-        "client_observed_completion_ms": 1030.37,
+        "task_id": "916291f55f1b478894ac2347a8053c4c",
+        "client_observed_completion_ms": 1030.29,
         "aggregation": {
           "raw_count": 1,
           "group_count": 1,
@@ -244,15 +252,15 @@
           "window_seconds": 10
         },
         "historical_packet_to_ingestion_seconds": {
-          "mean": 26101368.307564,
-          "max": 26101368.307564,
+          "mean": 26249683.942512,
+          "max": 26249683.942512,
           "interpretation": "历史样本墙钟差，包含样本年代，不可用来评价引擎处理速度"
         }
       }
     ],
     "limitations": [
       "已覆盖 Web、扫描、异常 DNS、HTTP 认证失败四类线索；正常基线的 DNS 仅查询、TLS 仅 ClientHello，不含完整握手",
-      "finding 聚合只用于评测误报计数，尚非业务告警抑制功能",
+      "评测误报分组与业务固定时间桶聚合分开计算；原始告警始终保留",
       "离线抓包历史时间与处理时间分开，不用历史包到当前日期的差值冒充检测耗时"
     ]
   }

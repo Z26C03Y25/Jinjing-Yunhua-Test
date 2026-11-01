@@ -1,6 +1,6 @@
 # 金睛云华 · 流量威胁检测系统
 
-基于 Suricata 的离线 PCAP 检测与告警研判系统。当前已跑通真实检测；这是持续完善中的赛题作品，不是生产部署。
+基于 Suricata 的离线 PCAP 检测与告警研判系统。当前已跑通真实检测；这是功能冻结的赛题交付版，已知缺口如实列出，不宣称生产部署。
 
 ## 快速开始（Ubuntu）
 
@@ -66,3 +66,12 @@ SQLite 降低部署复杂度，单 worker 和四项队列限制引擎资源；�
 目录沿用题面：rules、backend、frontend、data、validation、agent-log、docs；开发关键提交与真实错误记录保留。初始化脚本已在独立目录、端口和空数据卷验证成功（24 秒，使用镜像缓存）；不等同无缓存全新服务器验收，详见 docs/acceptance-result.md。
 
 界面布局参考[若依前端手册](https://doc.ruoyi.vip/ruoyi/document/qdsc.html)中查询区、工具栏、表格和分页的常见后台组织方式。页面组件为本项目独立实现，未引入若依框架或拷贝其源码。
+
+## 最终交付索引（2026-11-01）
+
+- [开始录制](docs/开始录制.md)：录制环境已配置，用户只需录制实际视频。
+- [题面对照验收](docs/delivery-checklist.md)：Must/Should/Could及验证边界。
+- [一页自验报告](output/pdf/自验报告.pdf)、[完整评测](validation/report.md)。
+- [提交说明](docs/提交说明.md)：材料路径与邮件草稿，未发送。
+- 实际人工工时未单独记录，Git提交日期不等于工时；个人资料不猜测、不冒签。
+- 部分docs/stage*及implementation-plan为开发历史，最终操作以使用指南和开始录制为准。

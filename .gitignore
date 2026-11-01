@@ -36,3 +36,5 @@ tmp/
 
 .recording/
 .runtime-release/
+
+output/delivery/
